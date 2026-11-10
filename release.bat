@@ -1,7 +1,7 @@
 @echo off
 rem Tests, builds and publishes to Object Storage, then the legacy Yandex.Disk mirror.
 rem Before running: bump "version" in package.json; the Yandex.Disk app must be running and signed in.
-rem If GH_TOKEN is set, a draft GitHub release is created as well.
+rem Last step: reserve copy on GitHub (needs a token saved with build\setup-github-token.ps1; skipped without it).
 cd /d "%~dp0"
 where npm >nul 2>nul
 if errorlevel 1 (
@@ -24,7 +24,6 @@ set ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/
 set ELECTRON_BUILDER_BINARIES_MIRROR=https://npmmirror.com/mirrors/electron-builder-binaries/
 set CSC_IDENTITY_AUTO_DISCOVERY=false
 set PUBLISH=never
-if not "%GH_TOKEN%"=="" set PUBLISH=always
 rem Separate output folder, so a launcher running from dist does not lock the build
 call npx electron-builder --win --publish %PUBLISH% --config.directories.output=dist-release || (pause & exit /b 1)
 echo.
@@ -40,9 +39,10 @@ rem Build and deploy the website only AFTER both launcher uploads succeed.
 if exist website\package.json (
   node build\website-release.js dist-release --build && call build\deploy-website.bat || echo WARNING: Launcher is published, but website update failed. Retry: node build/website-release.js dist-release --build ^&^& build\deploy-website.bat
 )
+rem Reserve copy on GitHub (source push + release with installers). Runs last; skipped without a saved token; a failure never cancels the release.
+powershell -NoProfile -ExecutionPolicy Bypass -File build\publish-github.ps1 -Out dist-release || echo WARNING: Launcher is published, but the GitHub reserve step failed. Retry: powershell -File build\publish-github.ps1 -Out dist-release
 rem A failed clean-up must not leave an error code behind: the release itself went through
 ver >nul
 echo.
 echo Installed launchers will pick up the new version on next start (or within 2 hours).
-if not "%GH_TOKEN%"=="" echo A draft GitHub release was created too: open https://github.com/EternalPorter16/femboy-launcher/releases and press "Publish release".
 pause

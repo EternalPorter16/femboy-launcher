@@ -119,6 +119,7 @@ test('release.bat на копии: ошибки тестов/публикаци�
   })) fs.writeFileSync(path.join(fakebin, name), text);
   fs.writeFileSync(path.join(p.root, 'build/publish-s3.ps1'), 'param([string]$Out, [switch]$Check)\nif ($Check) { Add-Content -LiteralPath $env:FAKELOG -Value "s3-check"; exit ([int]$env:S3_CHECK_FAIL) }\nAdd-Content -LiteralPath $env:FAKELOG -Value "s3-publish"\nexit ([int]$env:S3_PUBLISH_FAIL)\n');
   fs.writeFileSync(path.join(p.root, 'build/publish-yandex.ps1'), 'param([string]$Out)\nAdd-Content -LiteralPath $env:FAKELOG -Value "publish"\nexit ([int]$env:PUBLISH_FAIL)\n');
+  fs.writeFileSync(path.join(p.root, 'build/publish-github.ps1'), 'param([string]$Out)\nAdd-Content -LiteralPath $env:FAKELOG -Value "github"\nexit 0\n');
   fs.writeFileSync(path.join(p.root, 'build/clean-dist.js'), 'process.exit(0);');
   fs.writeFileSync(path.join(p.root, 'build/release-notes.js'), 'process.exit(0);');
   fs.writeFileSync(path.join(p.root, 'build/website-release.js'), 'require("fs").appendFileSync(process.env.FAKELOG,"website\\n");process.exit(Number(process.env.WEBSITE_FAIL));');
@@ -128,9 +129,9 @@ test('release.bat на копии: ошибки тестов/публикаци�
     [0, 1, 0, 0, 0, 0, ['tests', 's3-check'], 1],
     [0, 0, 1, 0, 0, 0, ['tests', 's3-check', 'build', 's3-publish'], 1],
     [0, 0, 0, 1, 0, 0, ['tests', 's3-check', 'build', 's3-publish', 'publish'], 1],
-    [0, 0, 0, 0, 0, 0, ['tests', 's3-check', 'build', 's3-publish', 'publish', 'website', 'deploy deploy --only hosting --project femboy-launcher --non-interactive'], 0],
-    [0, 0, 0, 0, 1, 0, ['tests', 's3-check', 'build', 's3-publish', 'publish', 'website'], 0],
-    [0, 0, 0, 0, 0, 1, ['tests', 's3-check', 'build', 's3-publish', 'publish', 'website', 'deploy deploy --only hosting --project femboy-launcher --non-interactive'], 0],
+    [0, 0, 0, 0, 0, 0, ['tests', 's3-check', 'build', 's3-publish', 'publish', 'website', 'deploy deploy --only hosting --project femboy-launcher --non-interactive', 'github'], 0],
+    [0, 0, 0, 0, 1, 0, ['tests', 's3-check', 'build', 's3-publish', 'publish', 'website', 'github'], 0],
+    [0, 0, 0, 0, 0, 1, ['tests', 's3-check', 'build', 's3-publish', 'publish', 'website', 'deploy deploy --only hosting --project femboy-launcher --non-interactive', 'github'], 0],
   ]) {
     fs.rmSync(log, { force: true });
     const run = spawnSync(process.env.ComSpec || 'cmd.exe', ['/d', '/c', 'release.bat'], {
