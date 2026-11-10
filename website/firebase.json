@@ -1,0 +1,18 @@
+{
+  "hosting": {
+    "public": "dist",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "site": "femboy-launcher",
+    "redirects": [
+      {
+        "destination": "https://femboylauncher.ru/:path",
+        "regex": "^/(?P<path>.*)$",
+        "type": 301
+      }
+    ]
+  }
+}

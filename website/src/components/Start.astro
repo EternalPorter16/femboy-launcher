@@ -1,0 +1,24 @@
+---
+import { steps } from '../data/content.js';
+---
+
+<section class="section" id="start" aria-labelledby="start-title">
+  <div class="wrap">
+    <div class="section-head">
+      <h2 id="start-title">Как начать играть в Minecraft Java Edition</h2>
+      <p>Четыре шага от скачивания до своего мира. Java и файлы игры отдельно искать не нужно.</p>
+    </div>
+    <ol class="steps">
+      {
+        steps.map((s) => (
+          <li>
+            <h3>{s.title}</h3>
+            <p>{s.text}</p>
+          </li>
+        ))
+      }
+    </ol>
+    <p class="release-history-link"><a href={`${import.meta.env.BASE_URL}guides/install-modrinth-modpack/`}>Как установить сборку Modrinth: инструкция со скриншотами</a></p>
+    <p class="release-history-link"><a href={`${import.meta.env.BASE_URL}guides/setup-or-portable/`}>Установщик или Portable: какой вариант скачать и как запустить</a></p>
+  </div>
+</section>

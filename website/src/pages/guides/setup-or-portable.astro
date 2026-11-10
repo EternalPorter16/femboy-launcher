@@ -1,0 +1,61 @@
+---
+import Base from '../../layouts/Base.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+---
+
+<Base title="Установщик или Portable: как установить Femboy Launcher" description="Как выбрать и запустить Femboy Launcher для Minecraft Java Edition на Windows 10 и 11: установка, Portable, хранение сборок и обновления.">
+  <Header />
+  <main id="main" class="section">
+    <article class="wrap guide">
+      <a href={base}>← На главную</a>
+      <h1>Установщик или Portable: как установить Femboy Launcher</h1>
+      <p class="intro">Оба варианта запускают Minecraft Java Edition и поддерживают одни и те же возможности лаунчера. Разница — в установке, месте хранения данных и обновлениях.</p>
+      <p>Понадобится 64-битная Windows 10 или 11. Версий для Windows 7, macOS, Linux и Android у Femboy Launcher нет.</p>
+
+      <h2>Что выбрать для обычного компьютера</h2>
+      <p>Если собираешься играть на одном компьютере, выбирай <strong>установщик</strong>. Он устанавливает программу, создаёт ярлыки и позволяет удалять её через раздел «Приложения» Windows. Сборки и миры хранятся в профиле Windows.</p>
+      <ol>
+        <li>Открой <a href={`${base}#download`}>раздел скачивания</a> и выбери установщик.</li>
+        <li>Запусти скачанный EXE и следуй указаниям установщика.</li>
+        <li>Открой лаунчер через созданный ярлык.</li>
+      </ol>
+      <p>Установленная версия проверяет обновления и предлагает применить их. Она также поддерживает открытие файлов сборок <code>.mrpack</code> двойным щелчком.</p>
+
+      <h2>Когда удобнее Portable</h2>
+      <p><strong>Portable</strong> запускается без установки. Его данные лежат в папке <code>data</code> рядом с EXE. Этот вариант удобен для отдельной папки или флешки.</p>
+      <ol>
+        <li>Скачай Portable из <a href={`${base}#download`}>раздела скачивания</a>.</li>
+        <li>Помести EXE в отдельную папку, в которую у тебя есть право записи.</li>
+        <li>Запусти файл. Сохраняй папку <code>data</code> вместе с ним при переносе.</li>
+      </ol>
+      <p>Portable сообщает о новых версиях, но не заменяет себя автоматически. Для обновления скачай новый EXE и положи его рядом с прежней папкой <code>data</code>. Не удаляй эту папку: в ней хранятся твои данные.</p>
+
+      <h2>Если старая версия не получает обновление</h2>
+      <p>При ошибке <code>429 / Too Many Requests</code> от API Яндекс.Диска установи актуальный Setup поверх старой установленной версии, предварительно закрыв игру и лаунчер. Удалять приложение или папку данных перед этим не нужно. Для Portable скачай новый EXE и сохрани прежнюю папку <code>data</code>. <a href={`${base}#help-update-429`}>Пошаговая инструкция для старых версий</a>.</p>
+
+      <h2>Что делать после первого запуска</h2>
+      <p>Выбери способ входа и создай сборку с нужной версией Minecraft и загрузчиком модов. Подходящую Java лаунчер скачает сам — отдельно устанавливать её обычно не нужно.</p>
+      <p>Femboy Launcher — независимый проект, не связанный с Mojang Studios и Microsoft. Для игры с лицензией используй аккаунт Microsoft с купленной Minecraft: Java Edition. Оффлайн-профиль не даёт доступа к серверам с проверкой лицензии.</p>
+
+      <p>Готовая сборка с модами: <a href={`${base}guides/install-modrinth-modpack/`}>как установить модпак Modrinth через лаунчер</a>.</p>
+      <h2>Если файл не скачивается или Windows показывает предупреждение</h2>
+      <p>Если прямая кнопка скачивания выдаёт ошибку, рядом есть кнопка «Открыть файлы на Яндекс.Диске». В папке выбери файл с <code>Setup</code> для установки или <code>Portable</code> для запуска без установки. Точная версия и имена файлов указаны в разделе скачивания.</p>
+      <p>У лаунчера пока нет цифровой подписи. Если Windows показывает предупреждение, сначала прочитай <a href={`${base}#help`}>инструкцию по проверке файла и запуску</a>. Отключать защиту Windows для установки не требуется.</p>
+      <p><a class="btn btn-primary" href={`${base}#download`}>Выбрать и скачать лаунчер</a></p>
+    </article>
+  </main>
+  <Footer />
+  <script src="../../scripts/site.js"></script>
+</Base>
+
+<style>
+  .guide { max-width: 800px; overflow-wrap: anywhere; }
+  h1 { font-size: clamp(2rem, 1.4rem + 2vw, 3.2rem); margin-block: 24px; }
+  h2 { font-size: clamp(1.4rem, 1.1rem + 1vw, 1.9rem); margin-block: 36px 16px; }
+  p, ol { margin-block: 16px; }
+  .intro { font-size: 1.15rem; color: var(--muted); }
+  ol { padding-left: 1.5rem; }
+  li { margin-block: 10px; }
+</style>

@@ -1,0 +1,54 @@
+---
+import { features, extras } from '../data/content.js';
+import Shot from './Shot.astro';
+import Icon from './Icon.astro';
+---
+
+<section class="section" id="features" aria-labelledby="features-title">
+  <div class="wrap">
+    <div class="section-head">
+      <h2 id="features-title">Что он умеет</h2>
+      <p>Главное, ради чего стоит попробовать. Всё остальное, от консоли с поиском до активности в Discord, найдёшь в самом лаунчере.</p>
+    </div>
+
+    <div class="stories">
+      {
+        features.map((f) => (
+          <article class="story" id={`feature-${f.id}`}>
+            <div class="story-copy">
+              <h3>{f.title}</h3>
+              <p class="lead">{f.lead}</p>
+              <ul class="ticks">
+                {f.points.map((p) => (
+                  <li>{p}</li>
+                ))}
+              </ul>
+              {f.note && (
+                <p class="note">
+                  {f.note}: <a href="#faq-curseforge">подробнее в вопросах</a>.
+                </p>
+              )}
+            </div>
+            <Shot file={f.shot} alt={f.shotAlt} caption={f.title} group="features" sizes="(max-width: 860px) calc(100vw - 32px), 660px" />
+          </article>
+        ))
+      }
+    </div>
+
+    <div class="extras">
+      {
+        extras.map((e) => (
+          <div class="extra">
+            <h3>
+              <span class="ico">
+                <Icon name={e.icon} />
+              </span>
+              {e.title}
+            </h3>
+            <p>{e.text}</p>
+          </div>
+        ))
+      }
+    </div>
+  </div>
+</section>

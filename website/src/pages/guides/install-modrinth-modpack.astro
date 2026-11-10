@@ -1,0 +1,85 @@
+---
+import Base from '../../layouts/Base.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+import Shot from '../../components/Shot.astro';
+import GuideLightbox from '../../components/GuideLightbox.astro';
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+---
+
+<Base title="Как установить сборку Modrinth в Femboy Launcher" description="Пошаговая установка модпака Modrinth в Femboy Launcher: поиск сборки, установка, первый запуск Minecraft Java Edition и импорт файла .mrpack.">
+  <Header />
+  <main id="main" class="section">
+    <article class="wrap guide">
+      <a href={base}>← На главную</a>
+      <h1>Как установить сборку Modrinth в Femboy Launcher</h1>
+      <p class="intro">Модпак — готовая сборка Minecraft с набором модов и настройками. В Femboy Launcher его можно найти и установить из каталога Modrinth, не раскладывая моды по папкам вручную.</p>
+      <p>Инструкция для Femboy Launcher 0.10.0 на 64-битной Windows 10 или 11. Если лаунчер ещё не скачан, начни с <a href={`${base}guides/setup-or-portable/`}>выбора установщика или Portable</a>. Для загрузки модпака и первого запуска нужен интернет.</p>
+      <nav class="contents" aria-label="Содержание инструкции">
+        <strong>В этой инструкции</strong>
+        <ol>
+          <li><a href="#catalog">Открыть каталог модпаков</a></li>
+          <li><a href="#install">Найти и установить сборку</a></li>
+          <li><a href="#play">Запустить Minecraft</a></li>
+          <li><a href="#mrpack">Импортировать файл .mrpack</a></li>
+          <li><a href="#trouble">Если что-то не получилось</a></li>
+        </ol>
+      </nav>
+
+      <h2 id="catalog">1. Открой каталог модпаков Modrinth</h2>
+      <p>В левом меню выбери <strong>«Моды»</strong>, затем источник <strong>Modrinth</strong> и тип <strong>«Модпаки»</strong>. В отличие от отдельного мода, модпак устанавливается как новая сборка: заранее создавать пустую сборку не нужно.</p>
+      <figure>
+        <Shot file="07-modpacks" alt="Femboy Launcher: в разделе «Моды» выбраны Modrinth и «Модпаки», рядом с результатами есть кнопки «Установить»" caption="Каталог модпаков: Моды → Modrinth → Модпаки" group="modrinth-guide" sizes="(max-width: 832px) calc(100vw - 32px), 800px" eager />
+        <figcaption>Настоящий экран каталога. Нажми на изображение, чтобы рассмотреть кнопки. Состав каталога и число скачиваний со временем меняются.</figcaption>
+      </figure>
+
+      <h2 id="install">2. Найди модпак и нажми «Установить»</h2>
+      <p>Введи название в поле <strong>«Поиск модпаков…»</strong>. При необходимости используй категории и сортировку. На скриншоте виден, например, Fabulously Optimized — это пример результата, а не обязательный выбор.</p>
+      <p>Кнопка со стрелкой рядом с проектом открывает его страницу. Перед установкой полезно прочитать описание и требования автора: разные модпаки рассчитаны на разную мощность компьютера.</p>
+      <p>Нажми <strong>«Установить»</strong> у выбранного проекта. Кнопка сменится на «Устанавливаю…». Дождись завершения: лаунчер загрузит модпак, моды и настройки и создаст отдельную сборку.</p>
+      <p>Установка модпака не означает добавление его модов в уже выбранную сборку. Если тебе нужен один мод для существующей сборки, используй вкладку «Моды», а не «Модпаки».</p>
+
+      <h2 id="play">3. Дождись готовности и нажми «Играть»</h2>
+      <p>После успешной установки лаунчер покажет сообщение о готовности, выберет новую сборку и откроет раздел <strong>«Сборки»</strong>. Проверь название выбранной сборки и нажми <strong>«Играть»</strong>.</p>
+      <figure>
+        <Shot file="03-instances-sakura" alt="Раздел «Сборки» Femboy Launcher: карточка выбранной сборки с названием, версией Minecraft, загрузчиком и кнопкой «Играть»" caption="Где запускать установленную сборку" group="modrinth-guide" sizes="(max-width: 832px) calc(100vw - 32px), 800px" />
+        <figcaption>Общий вид раздела «Сборки» на демонстрационном профиле. Здесь показана «Уютное выживание», а не результат установки модпака с предыдущего скриншота. У тебя будет название установленного проекта.</figcaption>
+      </figure>
+      <p>При первом запуске лаунчер скачает необходимые файлы игры и подходящую Java. Для Forge и NeoForge загрузчик доустанавливается на этом этапе, поэтому первый запуск может занять больше времени. Не закрывай лаунчер, пока идёт подготовка.</p>
+      <p>Для игры с лицензией используй аккаунт Microsoft с купленной Minecraft: Java Edition. Оффлайн-профиль не даёт доступа к серверам с проверкой лицензии. Femboy Launcher — независимый проект, не связанный с Mojang Studios и Microsoft.</p>
+
+      <h2 id="mrpack">Если модпак уже скачан файлом .mrpack</h2>
+      <p>Файл <code>.mrpack</code> — ещё один способ установить модпак Modrinth. Его можно перетащить в окно лаунчера или выбрать через кнопку <strong>«Импорт»</strong> в разделе «Сборки».</p>
+      <p>В версии с установщиком также работает двойной щелчок по <code>.mrpack</code> в Проводнике: лаунчер откроется и спросит подтверждение установки модпака как новой сборки. Для Portable используй импорт или перетаскивание.</p>
+
+      <h2 id="trouble">Если сборка не установилась или не запускается</h2>
+      <ul>
+        <li><strong>Поиск пустой:</strong> проверь написание названия, выбранные Modrinth и «Модпаки», а также фильтр категории.</li>
+        <li><strong>Ошибка загрузки:</strong> прочитай сообщение лаунчера и проверь подключение. Доступность Modrinth и файлов конкретного проекта зависит от внешних сервисов.</li>
+        <li><strong>Долгий первый запуск:</strong> посмотри, продолжается ли подготовка файлов. Для Forge и NeoForge на первом запуске требуется дополнительная установка.</li>
+        <li><strong>Игра вылетает:</strong> прочитай сообщение лаунчера и требования автора модпака. В разделе «Консоль» можно посмотреть подробности ошибки.</li>
+      </ul>
+      <p>Если нужна помощь, <a href={`${base}#help`}>открой раздел помощи</a> и сообщи название модпака, версию лаунчера и точный текст ошибки.</p>
+      <p><a class="btn btn-primary" href={`${base}#download`}>Скачать Femboy Launcher</a></p>
+      <p><a href={`${base}guides/setup-or-portable/`}>Ещё инструкция: чем установщик отличается от Portable</a></p>
+    </article>
+  </main>
+  <GuideLightbox />
+  <Footer />
+  <script src="../../scripts/site.js"></script>
+</Base>
+
+<style>
+  .guide { max-width: 832px; overflow-wrap: anywhere; }
+  h1 { font-size: clamp(2rem, 1.4rem + 2vw, 3.2rem); margin-block: 24px; }
+  h2 { font-size: clamp(1.4rem, 1.1rem + 1vw, 1.9rem); margin-block: 36px 16px; scroll-margin-top: calc(var(--header-h) + 24px); }
+  p, ol, ul { margin-block: 16px; }
+  .intro { font-size: 1.15rem; color: var(--muted); }
+  ol, ul { padding-left: 1.5rem; }
+  li { margin-block: 10px; }
+  figure { margin: 24px 0; }
+  figcaption { margin-top: 12px; color: var(--muted); font-size: .95rem; }
+  .contents { padding: 20px; border: 1px solid var(--stroke); border-radius: var(--r-md); background: var(--glass); }
+  .contents ol { margin-bottom: 0; }
+</style>
+

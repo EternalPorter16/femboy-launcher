@@ -1,0 +1,1010 @@
+[
+  {
+    "version": "0.10.2",
+    "date": "2026-11-08",
+    "items": [
+      {
+        "icon": "❄️",
+        "title": "Зима с 1 декабря",
+        "text": "котик надевает шарф, на фоне появляется лёгкий снег, а в репликах — зимнее настроение. С 15 декабря по 10 января шарф сменяется новогодней шапкой"
+      },
+      {
+        "icon": "📅",
+        "title": "Наряды по календарю",
+        "text": "сезонное оформление переключается и в открытом лаунчере после смены даты или возвращения из сна. Хэллоуинский наряд показывается только с 20 октября по 3 ноября"
+      },
+      {
+        "icon": "⚙️",
+        "title": "Твои настройки важнее",
+        "text": "выбранный аксессуар сохраняется; снег отключается вместе с сезонным оформлением, анимациями или при экономном режиме"
+      }
+    ],
+    "itemsEn": [
+      {
+        "icon": "❄️",
+        "title": "Winter starts December 1",
+        "text": "a cozy scarf, gentle snowfall and winter phrases arrive automatically. From December 15 to January 10, a festive hat replaces the scarf"
+      },
+      {
+        "icon": "📅",
+        "title": "Outfits follow the calendar",
+        "text": "seasonal decorations refresh in an open launcher when the date changes or the computer wakes up. The Halloween outfit only appears October 20 through November 3"
+      },
+      {
+        "icon": "⚙️",
+        "title": "Your preferences come first",
+        "text": "your chosen accessory stays in place; snow is disabled when seasonal decorations or animations are off, or eco mode is enabled"
+      }
+    ]
+  },
+  {
+    "version": "0.10.1",
+    "date": "2026-11-08",
+    "items": [
+      {
+        "icon": "⬇️",
+        "title": "Обновления с нашего домена",
+        "text": "следующие обновления установленного лаунчера скачиваются с downloads.femboylauncher.ru по постоянным HTTPS-ссылкам, без получения временных ссылок Яндекс.Диска"
+      },
+      {
+        "icon": "🌐",
+        "title": "Скачивание Portable с сайта",
+        "text": "кнопка загрузки новой Portable-версии открывает раздел скачивания на femboylauncher.ru"
+      }
+    ],
+    "itemsEn": [
+      {
+        "icon": "⬇️",
+        "title": "Updates from our domain",
+        "text": "future updates of the installed launcher download from downloads.femboylauncher.ru over permanent HTTPS links, without requesting temporary Yandex Disk links"
+      },
+      {
+        "icon": "🌐",
+        "title": "Portable downloads from the website",
+        "text": "the download button for a new Portable version opens the download section on femboylauncher.ru"
+      }
+    ]
+  },
+  {
+    "version": "0.10.0",
+    "date": "2026-11-03",
+    "items": [
+      {
+        "icon": "📚",
+        "title": "Коллекция Modrinth",
+        "text": "кнопка «Коллекция» в «Модах» (и в Ctrl+K): вставь ссылку на коллекцию, и лаунчер покажет её моды, ресурспаки и шейдеры, пометит, что подходит выбранной сборке, а что нет и почему, и поставит выбранное в существующую или новую сборку. Закрытые коллекции лаунчер не видит"
+      },
+      {
+        "icon": "🚪",
+        "title": "Войти к другу",
+        "text": "хозяин копирует «код сборки», друг вставляет сообщение целиком: лаунчер находит адрес и код, сверяет моды с Modrinth и ставит точные версии, в том числе в новую сборку «как у друга». Перед правкой модов сохраняется точка восстановления"
+      },
+      {
+        "icon": "👥",
+        "title": "Следовать за сборкой друга",
+        "text": "галочка в окне «Войти к другу»: когда друг обновит моды и пришлёт новый код, вставь его, и сборка станет такой же; моды, которых у друга нет, лаунчер отключает (не удаляет). Сам он ничего по ссылкам не проверяет"
+      },
+      {
+        "icon": "⏪",
+        "title": "Что изменилось с последнего удачного запуска",
+        "text": "после вылета окно показывает, какие моды и настройки загрузчика поменялись с тех пор, как игра в последний раз закрылась нормально, и откатывает их одним щелчком"
+      },
+      {
+        "icon": "🚀",
+        "title": "Пора на новую версию?",
+        "text": "раз в сутки лаунчер в фоне спрашивает Modrinth, сколько модов сборки уже вышло под самую свежую версию игры, и показывает значок на карточке (по нему открывается перенос). На Modrinth уходят хэши файлов модов; выключатель в Настройках → «Игра и Java»"
+      },
+      {
+        "icon": "⬆️",
+        "title": "Вышли обновления модов",
+        "text": "тем же способом лаунчер замечает новые версии модов: значок «N обновлений модов» на карточке, а в окне обновлений у каждой версии есть «Что нового». Выключатель рядом с предыдущим"
+      },
+      {
+        "icon": "🖼️",
+        "title": "Итоги игры",
+        "text": "картинка с неделей или месяцем игры (часы, любимая сборка, самая долгая игра, реплика котика): сохрани её или скопируй. Кнопка в «Время в игре» и в Ctrl+K"
+      },
+      {
+        "icon": "🖱️",
+        "title": "Двойной щелчок по .mrpack",
+        "text": "в установленной версии (не portable) файл .mrpack открывается лаунчером, и он спрашивает, поставить ли модпак как новую сборку"
+      },
+      {
+        "icon": "📌",
+        "title": "Прогресс и сборки на значке",
+        "text": "полоска прогресса на значке в панели задач, пока что-то грузится, и список последних сборок в меню значка (правый щелчок), если Windows это разрешает"
+      },
+      {
+        "icon": "🔗",
+        "title": "Одинаковые моды одним файлом",
+        "text": "Настройки → «Место на диске»: «Найти одинаковые моды» показывает, сколько места освободится, «Объединить» хранит одинаковые моды в разных сборках одним файлом. Только по кнопке; сборки, где идёт игра, не трогаются"
+      }
+    ],
+    "itemsEn": [
+      {
+        "icon": "📚",
+        "title": "Modrinth collection",
+        "text": "a “Collection” button in “Mods” (and in Ctrl+K): paste a collection link and the launcher lists its mods, resource packs and shaders, marks what fits the chosen instance and what doesn’t (and why), and installs your picks into an existing or a new instance. Private collections are invisible to the launcher"
+      },
+      {
+        "icon": "🚪",
+        "title": "Join a friend",
+        "text": "the host copies the “pack code”, the friend pastes the whole message: the launcher finds the address and the code, checks the mods against Modrinth and installs the exact versions, also into a new instance “like the friend’s”. A restore point is saved before the mods are touched"
+      },
+      {
+        "icon": "👥",
+        "title": "Follow a friend’s pack",
+        "text": "a tick in the “Join a friend” window: when the friend updates their mods and sends a new code, paste it and your instance becomes the same; mods the friend doesn’t have are switched off (not deleted). The launcher never checks any links on its own"
+      },
+      {
+        "icon": "⏪",
+        "title": "What changed since the last good launch",
+        "text": "after a crash the window shows which mods and loader settings changed since the game last closed normally, and rolls them back in one click"
+      },
+      {
+        "icon": "🚀",
+        "title": "Time for a new version?",
+        "text": "once a day the launcher asks Modrinth in the background how many of an instance’s mods are already out for the newest game version and shows a badge on the card (it opens the migration). The hashes of the mod files go to Modrinth; there is a switch in Settings → “Game and Java”"
+      },
+      {
+        "icon": "⬆️",
+        "title": "Mod updates are out",
+        "text": "the same way the launcher notices new mod versions: an “N mod updates” badge on the card, and every version in the update window has “What’s new”. The switch sits next to the previous one"
+      },
+      {
+        "icon": "🖼️",
+        "title": "Play recap",
+        "text": "a picture of your week or month in the game (hours, favourite instance, longest session, a line from the cat): save it or copy it. A button in “Time in game” and in Ctrl+K"
+      },
+      {
+        "icon": "🖱️",
+        "title": "Double-click a .mrpack",
+        "text": "in the installed version (not portable) a .mrpack file opens in the launcher, which asks whether to install the modpack as a new instance"
+      },
+      {
+        "icon": "📌",
+        "title": "Progress and instances on the icon",
+        "text": "a progress bar on the taskbar icon while something downloads, and a list of recent instances in the icon’s menu (right click), if Windows allows it"
+      },
+      {
+        "icon": "🔗",
+        "title": "Identical mods as one file",
+        "text": "Settings → “Disk space”: “Find identical mods” shows how much space would be freed, “Merge” keeps identical mods of different instances as a single file. Button only; instances with a running game are left alone"
+      }
+    ]
+  },
+  {
+    "version": "0.9.0",
+    "date": null,
+    "items": [
+      {
+        "icon": "💞",
+        "title": "Один список друзей",
+        "text": "в окне «Играть с другом» друзья теперь общие для всех сборок: у каждого галочка «пустить в этот мир» и пометка «с лицензией» / «без лицензии»; ники, которые раньше помнила каждая сборка, перенеслись в список сами"
+      },
+      {
+        "icon": "👀",
+        "title": "Кто сейчас в мире",
+        "text": "когда друг заходит в твой мир или выходит из него, лаунчер скажет об этом всплывающей подсказкой, а в окне с адресом написано, кто там сейчас"
+      },
+      {
+        "icon": "🔌",
+        "title": "Вход по сети и VPN",
+        "text": "если друг в одной сети с тобой или в одной комнате Radmin VPN, Hamachi, ZeroTier или Tailscale, лаунчер покажет прямые адреса вида 192.168.0.5:61223 (с названием адаптера): их можно дать другу вместо адреса e4mc; если e4mc не вышел, адреса появятся в окне «Мир открыт по сети»"
+      },
+      {
+        "icon": "💾",
+        "title": "Копия мира перед друзьями",
+        "text": "когда ты открываешь мир для друзей, лаунчер сначала сохраняет его копию (во вкладке «Миры» она подписана «автокопия»). Если в гостях что-то сломают, мир можно вернуть таким, каким он был. Выключается в Настройки → «Игра и Java» → «Играть с другом»"
+      },
+      {
+        "icon": "🔧",
+        "title": "Починить файлы игры",
+        "text": "кнопка в окне сборки («Ещё»): лаунчер заново проверяет клиент, библиотеки, ресурсы и загрузчик по хэшам и скачивает только повреждённое; миры, моды и настройки не трогает. Обычный запуск теперь тоже замечает недокачанные ресурсы (по размеру), поэтому первый запуск после обновления может что-то докачать"
+      },
+      {
+        "icon": "📌",
+        "title": "Закрепить версию мода",
+        "text": "значок 📌 у мода: «Обновить моды» закреплённый мод пропускает, пока ты сам его не открепишь"
+      },
+      {
+        "icon": "🔎",
+        "title": "Поиск по консоли и лог игры",
+        "text": "в консоли можно искать по строкам и оставить «только ошибки»; в окне сборки («Ещё») появились кнопки «Лог игры» и «Папка логов»"
+      },
+      {
+        "icon": "📊",
+        "title": "Время в игре",
+        "text": "Настройки → «Котик и награды»: неделя по дням, время по сборкам за 30 дней, всего и самая долгая игра; счёт идёт с этой версии, прежние часы лаунчер не знает"
+      },
+      {
+        "icon": "💽",
+        "title": "Не хватает места — скажу сразу",
+        "text": "перед большими загрузками (клиент игры, библиотеки, ресурсы) лаунчер проверяет свободное место и предупреждает заранее, а не на середине скачивания"
+      },
+      {
+        "icon": "🧹",
+        "title": "Старые логи игры",
+        "text": "в «Освободить место» (Настройки → «Место и переезд») появилась строка про старые логи и отчёты о вылетах из общей папки игры, если они там остались; у каждой сборки логи теперь свои"
+      },
+      {
+        "icon": "🌐",
+        "title": "Прокси для игры — по желанию",
+        "text": "новый переключатель «Передавать игре прокси лаунчера» (Настройки → «Игра и Java»): включён, как и раньше; выключи, и игра пойдёт в сеть напрямую"
+      },
+      {
+        "icon": "✨",
+        "title": "Что нового — до обновления",
+        "text": "когда выходит новая версия, по кнопке обновления можно прочитать, что в ней нового, ещё до установки"
+      }
+    ],
+    "itemsEn": [
+      {
+        "icon": "💞",
+        "title": "One friends list",
+        "text": "in the “Play with a friend” window your friends are now shared by all instances: each one has a “tick — let them into this world” box and a “licensed” / “no license” flag; the nicknames each instance used to remember moved into the list by themselves"
+      },
+      {
+        "icon": "👀",
+        "title": "Who is in the world right now",
+        "text": "when a friend joins your world or leaves it, the launcher tells you in a pop-up, and the address window shows who is there at the moment"
+      },
+      {
+        "icon": "🔌",
+        "title": "Joining over your network or VPN",
+        "text": "if your friend is on the same network as you or in the same Radmin VPN, Hamachi, ZeroTier or Tailscale room, the launcher shows direct addresses like 192.168.0.5:61223 (with the adapter’s name): give one to your friend instead of the e4mc address; if e4mc fails, the addresses appear in a “The world is open on the network” window"
+      },
+      {
+        "icon": "💾",
+        "title": "A world copy before friends",
+        "text": "when you open a world to friends, the launcher saves a copy of it first (in the “Worlds” tab it is labelled “auto backup”). If something gets broken while they are over, you can bring the world back as it was. Turn it off in Settings → “Game and Java” → “Play with a friend”"
+      },
+      {
+        "icon": "🔧",
+        "title": "Repair game files",
+        "text": "a button in the instance window (“More”): the launcher re-checks the game client, libraries, assets and the loader against their hashes and downloads only what is damaged; worlds, mods and settings stay untouched. A regular launch now also notices half-downloaded assets (by size), so the first launch after the update may download a few of them again"
+      },
+      {
+        "icon": "📌",
+        "title": "Pin a mod version",
+        "text": "the 📌 next to a mod: “Update mods” skips a pinned mod until you unpin it yourself"
+      },
+      {
+        "icon": "🔎",
+        "title": "Console search and the game log",
+        "text": "search the console lines and keep “errors only”; the instance window (“More”) has new “Game log” and “Logs folder” buttons"
+      },
+      {
+        "icon": "📊",
+        "title": "Time in game",
+        "text": "Settings → “Kitty and rewards”: the week day by day, time per instance over 30 days, the total and your longest session; counting starts with this version, the launcher doesn’t know your earlier hours"
+      },
+      {
+        "icon": "💽",
+        "title": "Not enough space? You hear it first",
+        "text": "before big downloads (the game client, libraries, assets) the launcher checks the free space and warns you up front instead of failing halfway"
+      },
+      {
+        "icon": "🧹",
+        "title": "Old game logs",
+        "text": "the “Free up space” window (Settings → “Space and moving”) has a new row for old logs and crash reports in the shared game folder, if any are left; each instance now has its own logs"
+      },
+      {
+        "icon": "🌐",
+        "title": "The game’s proxy is optional",
+        "text": "a new switch “Pass the launcher’s proxy to the game” (Settings → “Game and Java”): on, as before; switch it off and the game goes online directly"
+      },
+      {
+        "icon": "✨",
+        "title": "What’s new before updating",
+        "text": "when a new version comes out, the update button lets you read what’s new in it before you install"
+      }
+    ]
+  },
+  {
+    "version": "0.8.4",
+    "date": null,
+    "items": [
+      {
+        "icon": "🧹",
+        "title": "Белый список живёт один мир",
+        "text": "когда мир, открытый для друзей, закрывается (и когда закрывается игра), лаунчер очищает белый список, чтобы друзья не заходили в каждый следующий мир сами; в следующий мир их нужно добавить заново — «Подготовить» в «Играть с другом» или /whitelist add. Друзей без лицензии теперь записывают только «Играть ♡» и «Подготовить» из этого окна, обычная «Играть» их не трогает. Окно с адресом показывает, кто записан на самом деле. Выключается в Настройки → «Играть с другом»"
+      },
+      {
+        "icon": "🗑️",
+        "title": "Корзина сборок",
+        "text": "«Удалить» теперь убирает сборку в корзину: пока лаунчер открыт, её можно вернуть целиком (кнопка «Корзина» на главной) или стереть навсегда, а когда лаунчер закроется, корзина очистится"
+      },
+      {
+        "icon": "📋",
+        "title": "Копирование ника",
+        "text": "кнопка «Копировать ник» у каждого аккаунта, правый клик по своему профилю внизу слева и «Скопировать мой ник» в Ctrl+K: ник нужен друзьям, чтобы записать тебя в свой белый список"
+      }
+    ],
+    "itemsEn": [
+      {
+        "icon": "🧹",
+        "title": "The whitelist lives for one world",
+        "text": "when a world opened for friends closes (and when the game closes), the launcher clears the whitelist so your friends don’t walk into every next world by themselves; for the next world add them again — “Prepare” in “Play with a friend” or /whitelist add. Friends without a license are now written only by “Play ♡” and “Prepare” in that window, the regular “Play” leaves them alone. The address window shows who is really on the list. You can turn this off in Settings → “Play with a friend”"
+      },
+      {
+        "icon": "🗑️",
+        "title": "Instance trash",
+        "text": "“Delete” now moves an instance to the trash: while the launcher is open you can bring it back whole (the “Trash” button on the main page) or erase it for good, and when the launcher closes the trash is emptied"
+      },
+      {
+        "icon": "📋",
+        "title": "Copy your nickname",
+        "text": "a “Copy nickname” button on every account, a right click on your profile at the bottom left and “Copy my nickname” in Ctrl+K: friends need your nickname to put you on their whitelist"
+      }
+    ]
+  },
+  {
+    "version": "0.8.3",
+    "date": null,
+    "items": [
+      {
+        "icon": "🩺",
+        "title": "Проверка игры с другом",
+        "text": "в окне «Играть с другом» появилась кнопка «Проверить»: за пару секунд она показывает, что мешает открыть мир другу — стоят ли нужные моды, как игра выходит в интернет, отвечает ли сервер e4mc, доходит ли UDP до ретранслятора и не мешает ли белый список; итог одной строкой, а отчёт можно скопировать"
+      },
+      {
+        "icon": "📣",
+        "title": "Подсказка, если e4mc не вышел",
+        "text": "если e4mc не достучался до своего сервера, лаунчер теперь отправляет к этой кнопке, а не к общей проверке связи"
+      }
+    ],
+    "itemsEn": [
+      {
+        "icon": "🩺",
+        "title": "Play-with-a-friend check",
+        "text": "the “Play with a friend” window has a new “Check” button: in a couple of seconds it shows what stands in the way of opening your world for a friend — whether the needed mods are installed, how the game goes online, whether the e4mc server answers, whether UDP reaches the relay and whether the whitelist gets in the way; a one-line verdict and a report you can copy"
+      },
+      {
+        "icon": "📣",
+        "title": "A pointer when e4mc fails",
+        "text": "if e4mc can’t reach its server, the launcher now sends you to that button instead of the general connection check"
+      }
+    ]
+  },
+  {
+    "version": "0.8.2",
+    "date": null,
+    "items": [
+      {
+        "icon": "📝",
+        "title": "Белый список для друзей без лицензии",
+        "text": "друг с заглавными буквами в нике больше не упирается в «Вас нет в белом списке»: лаунчер сам записывает список с верным UUID (игра считает его от ника с учётом регистра, а команда /whitelist add — от ника строчными); ник друга впиши точь-в-точь, как у него в игре"
+      },
+      {
+        "icon": "🪪",
+        "title": "Друзья с лицензией тоже проходят",
+        "text": "при «Подготовить» лаунчер находит на Mojang аккаунты с такими никами и записывает их настоящие UUID"
+      },
+      {
+        "icon": "🔘",
+        "title": "Подсказка про переключатель",
+        "text": "после открытия мира лаунчер напоминает про переключатель «Белый список» в окне «Открыть для сети»: он сохраняется вместе с миром, и пока он включён, в мир пускают только тех, кто в списке"
+      }
+    ],
+    "itemsEn": [
+      {
+        "icon": "📝",
+        "title": "Whitelist for friends without a license",
+        "text": "a friend with capital letters in their nickname no longer hits “You are not white-listed”: the launcher writes the list itself with the right UUID (the game computes it from the nickname with letter case, while the /whitelist add command uses the lowercase nickname); type your friend’s nickname exactly as it is in their game"
+      },
+      {
+        "icon": "🪪",
+        "title": "Friends with a license get in too",
+        "text": "on “Prepare” the launcher looks up accounts with those nicknames on Mojang and writes their real UUIDs"
+      },
+      {
+        "icon": "🔘",
+        "title": "A hint about the switch",
+        "text": "after the world opens the launcher reminds you about the “Whitelist” switch in the “Open to LAN” screen: it is saved with the world, and while it is on only people on the list can join"
+      }
+    ]
+  },
+  {
+    "version": "0.8.1",
+    "date": null,
+    "items": [
+      {
+        "icon": "💞",
+        "title": "Играть с другом: настоящий адрес",
+        "text": "вместо служебного broker.e4mc.link лаунчер показывает и копирует адрес твоего мира: его и вставляет друг"
+      },
+      {
+        "icon": "🌐",
+        "title": "Игра ходит через твой прокси",
+        "text": "моды, которые сами выходят в интернет (например, e4mc), не видели системный прокси, который ставят многие VPN, и не могли открыть мир; теперь игра получает тот же прокси, что и лаунчер, если он отвечает"
+      },
+      {
+        "icon": "📣",
+        "title": "Понятно, если не вышло",
+        "text": "если e4mc не достучался до своего сервера, лаунчер скажет об этом сразу, а не покажет мёртвый адрес"
+      },
+      {
+        "icon": "🗂️",
+        "title": "Логи игры у своей сборки",
+        "text": "latest.log и отчёты о вылете Java лежат в папке сборки: в отчёте для поддержки теперь есть лог игры, разбор вылета находит отчёты Java, а две запущенные сборки не пишут в один лог"
+      }
+    ],
+    "itemsEn": [
+      {
+        "icon": "💞",
+        "title": "Play with a friend: the real address",
+        "text": "instead of the service address broker.e4mc.link the launcher shows and copies your world’s address: the one your friend pastes"
+      },
+      {
+        "icon": "🌐",
+        "title": "The game goes through your proxy",
+        "text": "mods that go online by themselves (e4mc, for one) didn’t see the system proxy many VPNs set up and couldn’t open the world; now the game gets the same proxy as the launcher, if it answers"
+      },
+      {
+        "icon": "📣",
+        "title": "A clear message when it fails",
+        "text": "if e4mc can’t reach its server, the launcher says so right away instead of showing a dead address"
+      },
+      {
+        "icon": "🗂️",
+        "title": "Game logs stay with their instance",
+        "text": "latest.log and Java crash reports now live in the instance folder: the support report includes the game log, crash analysis finds Java’s reports, and two running instances no longer write to one log"
+      }
+    ]
+  },
+  {
+    "version": "0.8.0",
+    "date": null,
+    "items": [
+      {
+        "icon": "🧳",
+        "title": "Legacy Launcher (TL Legacy)",
+        "text": "сборки, миры и моды из него переносятся в пару кликов: лаунчер знает его папку игры и сборки по подпапкам"
+      },
+      {
+        "icon": "🔎",
+        "title": "Лаунчеры ищутся сами",
+        "text": "находятся и те, которых нет в списке (HMCL, PCL, MultiMC и другие, даже портативные в «Загрузках» или на другом диске); при запуске лаунчер один раз предложит перенести"
+      },
+      {
+        "icon": "🌐",
+        "title": "Работает через прокси и VPN",
+        "text": "лаунчер ходит в сеть как браузер: через системный прокси или VPN, а вход Microsoft тоже; свой прокси можно вписать в настройках, а кнопка «Проверить связь» покажет, до чего достучаться не вышло"
+      },
+      {
+        "icon": "✈️",
+        "title": "Запуск без интернета",
+        "text": "всё, что уже скачано, запускается без связи, даже с аккаунтом Microsoft (в одиночной игре всё работает)"
+      },
+      {
+        "icon": "✋",
+        "title": "Кнопка «Отменить»",
+        "text": "скачивание Java, файлов игры, модов и модпаков останавливается сразу, недокачанное удаляется"
+      },
+      {
+        "icon": "🛡️",
+        "title": "Настройки под защитой",
+        "text": "файл с аккаунтами пишется «целиком или никак», а после сбоя питания лаунчер сам вернёт всё из свежей копии"
+      },
+      {
+        "icon": "🕘",
+        "title": "Откат модов одним кликом",
+        "text": "перед обновлением модов, модпака и «Оптимизацией» лаунчер сам сохраняет точку восстановления; «Ещё → Точки восстановления» вернёт моды, config и версию загрузчика"
+      },
+      {
+        "icon": "🦊",
+        "title": "Вход через Ely.by",
+        "text": "скины и серверы Ely.by: логин, пароль и код двухфакторной защиты; пароль нигде не хранится"
+      },
+      {
+        "icon": "☕",
+        "title": "Выбор Java",
+        "text": "кнопки «Найти Java» и «Выбрать файл…», подсказка, подходит ли Java игре, и понятная ошибка вместо вылета"
+      },
+      {
+        "icon": "🧐",
+        "title": "Чужие моды видно",
+        "text": "моды, которых нет на Modrinth, помечаются «неизвестный источник»: чужие jar-файлы бывают вредоносными"
+      },
+      {
+        "icon": "📋",
+        "title": "Отчёт для поддержки",
+        "text": "один ZIP с версиями, железом, связью и логами без паролей и токенов; лог можно отправить на mclo.gs по кнопке"
+      },
+      {
+        "icon": "⌨️",
+        "title": "Быстрый поиск Ctrl+K",
+        "text": "сборки, страницы, действия и моды выбранной сборки"
+      },
+      {
+        "icon": "🔍",
+        "title": "Масштаб интерфейса",
+        "text": "90–150% в настройках и по Ctrl + «+», «−», «0»"
+      },
+      {
+        "icon": "🎒",
+        "title": "Настоящий portable",
+        "text": "у portable-версии данные лежат рядом с программой, в папке data: её можно унести на другой компьютер"
+      },
+      {
+        "icon": "🖥️",
+        "title": "Ярлык сборки",
+        "text": "кнопка «Ярлык на рабочий стол» в окне сборки: клик по ярлыку запускает именно её, а второй лаунчер не открывается — оживает уже открытое окно"
+      },
+      {
+        "icon": "🌍",
+        "title": "Играть в этот мир",
+        "text": "кнопка «Играть» рядом с миром запускает игру и сразу заходит в него (Minecraft 1.20 и новее)"
+      },
+      {
+        "icon": "🟢",
+        "title": "Индикатор связи",
+        "text": "точка в заголовке окна: зелёная — всё в порядке, оранжевая — часть серверов не отвечает, красная — связи нет; клик открывает «Проверить связь»"
+      },
+      {
+        "icon": "📜",
+        "title": "Лог лаунчера",
+        "text": "ход запуска и ошибки пишутся в logs/launcher.log; вместо сырого окна ошибки — понятное сообщение с кнопкой «Собрать отчёт»"
+      },
+      {
+        "icon": "🚀",
+        "title": "Перенос на новую версию",
+        "text": "копия сборки на новой версии Minecraft: лаунчер сам подбирает версии модов и показывает, чего под неё ещё нет; старая сборка остаётся как есть («Ещё → На новую версию»)"
+      },
+      {
+        "icon": "🔎",
+        "title": "Поиск мода-виновника",
+        "text": "игра вылетает, а из-за какого мода, непонятно? Лаунчер включает моды по частям, а ты говоришь, повторилась ли проблема; для 40 модов хватает около 8 запусков, а все моды потом возвращаются как были"
+      },
+      {
+        "icon": "🧩",
+        "title": "Версия загрузчика",
+        "text": "в «Изменить сборку» можно выбрать версию Fabric, Quilt, Forge или NeoForge: свежую, если её требует мод, или старую, если её требует модпак; окно сразу предупредит, каким модам выбранная версия не подходит"
+      }
+    ],
+    "itemsEn": [
+      {
+        "icon": "🧳",
+        "title": "Legacy Launcher (TL Legacy)",
+        "text": "move instances, worlds and mods from it in a couple of clicks: the launcher knows its game folder and per-instance subfolders"
+      },
+      {
+        "icon": "🔎",
+        "title": "Launchers are found automatically",
+        "text": "it finds ones that aren’t on the list too (HMCL, PCL, MultiMC and more, even portable copies in Downloads or on another drive); on startup it offers to move them once"
+      },
+      {
+        "icon": "🌐",
+        "title": "Works with proxies and VPNs",
+        "text": "the launcher goes online like a browser does, through the system proxy or VPN, Microsoft sign-in included; you can type your own proxy in the settings, and “Check connection” shows what couldn’t be reached"
+      },
+      {
+        "icon": "✈️",
+        "title": "Launch without internet",
+        "text": "whatever is already downloaded starts without a connection, even with a Microsoft account (singleplayer works as usual)"
+      },
+      {
+        "icon": "✋",
+        "title": "The “Cancel” button",
+        "text": "downloading Java, game files, mods and modpacks stops right away, and unfinished files are removed"
+      },
+      {
+        "icon": "🛡️",
+        "title": "Settings are protected",
+        "text": "the accounts file is written “all or nothing”, and after a power cut the launcher restores everything from a recent copy by itself"
+      },
+      {
+        "icon": "🕘",
+        "title": "Roll back mods in one click",
+        "text": "before updating mods, a modpack or running Optimization the launcher saves a restore point itself; “More → Restore points” brings back the mods, config and loader version"
+      },
+      {
+        "icon": "🦊",
+        "title": "Sign in with Ely.by",
+        "text": "Ely.by skins and servers: login, password and the two-factor code; the password is never stored"
+      },
+      {
+        "icon": "☕",
+        "title": "Java picker",
+        "text": "“Find Java” and “Choose a file…” buttons, a hint whether the Java fits the game, and a clear error instead of a crash"
+      },
+      {
+        "icon": "🧐",
+        "title": "Unknown mods are visible",
+        "text": "mods that aren’t on Modrinth are marked “unknown source”: unknown jar files can be malicious"
+      },
+      {
+        "icon": "📋",
+        "title": "Support report",
+        "text": "one ZIP with versions, hardware, connection and logs, without passwords or tokens; a log can be sent to mclo.gs with a button"
+      },
+      {
+        "icon": "⌨️",
+        "title": "Quick search Ctrl+K",
+        "text": "instances, pages, actions and the mods of the selected instance"
+      },
+      {
+        "icon": "🔍",
+        "title": "Interface scale",
+        "text": "90–150% in the settings and with Ctrl + “+”, “−”, “0”"
+      },
+      {
+        "icon": "🎒",
+        "title": "Real portable",
+        "text": "in the portable version the data lives next to the program, in the data folder: carry it to another computer"
+      },
+      {
+        "icon": "🖥️",
+        "title": "Instance shortcut",
+        "text": "a “Desktop shortcut” button in the instance window: clicking the shortcut launches that very instance, and no second launcher opens — the one that’s already open comes to the front"
+      },
+      {
+        "icon": "🌍",
+        "title": "Play this world",
+        "text": "the “Play” button next to a world starts the game and jumps right into it (Minecraft 1.20 and newer)"
+      },
+      {
+        "icon": "🟢",
+        "title": "Connection indicator",
+        "text": "a dot in the title bar: green — all good, orange — some servers don’t respond, red — no connection; click it to open “Check connection”"
+      },
+      {
+        "icon": "📜",
+        "title": "Launcher log",
+        "text": "launch progress and errors go to logs/launcher.log; instead of a raw error window you get a clear message with a “Build a report” button"
+      },
+      {
+        "icon": "🚀",
+        "title": "Move to a new version",
+        "text": "a copy of the instance on a new Minecraft version: the launcher picks the mod versions itself and shows what isn’t available yet; the old instance stays as it is (“More → To a new version”)"
+      },
+      {
+        "icon": "🔎",
+        "title": "Find the culprit mod",
+        "text": "the game crashes and you can’t tell which mod is to blame? The launcher enables the mods in parts and you tell it whether the problem came back; about 8 launches are enough for 40 mods, and all the mods are put back as they were afterwards"
+      },
+      {
+        "icon": "🧩",
+        "title": "Loader version",
+        "text": "in “Edit instance” you can pick the Fabric, Quilt, Forge or NeoForge version: a newer one if a mod needs it, or an older one if a modpack needs it; the window warns right away which mods the chosen version doesn’t suit"
+      }
+    ]
+  },
+  {
+    "version": "0.7.1",
+    "date": null,
+    "items": [
+      {
+        "icon": "😴",
+        "title": "Лаунчер не грузит ПК",
+        "text": "когда ты в игре или ничего не трогаешь, анимации замирают и процессор почти не работает; «Экономный режим» (сам включается на батарее) убирает лепестки и звёзды совсем"
+      },
+      {
+        "icon": "🔤",
+        "title": "Открывается сразу",
+        "text": "шрифты теперь внутри лаунчера: он не ждёт интернет и запускается мгновенно"
+      },
+      {
+        "icon": "🎮",
+        "title": "Мощная видеокарта",
+        "text": "на ноутбуках с двумя видеокартами лаунчер предложит запускать игру на мощной — Windows часто выбирает встроенную"
+      },
+      {
+        "icon": "⚡",
+        "title": "Оптимизация умнее",
+        "text": "окно со списком: Sodium, Lithium и другие — основа отмечена сама; на Forge вместо Sodium ставится Embeddium"
+      },
+      {
+        "icon": "🎚️",
+        "title": "Графика и советы",
+        "text": "экономная, сбалансированная или красивая графика одной кнопкой, а значок «⚡ N советов» на карточке сборки подскажет, что поправить"
+      },
+      {
+        "icon": "🎀",
+        "title": "Новый установщик",
+        "text": "пиксельный пейзаж как на карточке сборки, а при удалении — ночной"
+      }
+    ],
+    "itemsEn": [
+      {
+        "icon": "😴",
+        "title": "Easy on your PC",
+        "text": "when you’re in the game or not touching anything, animations freeze and the CPU stays almost idle; “Eco mode” (turns on by itself on battery) removes petals and stars completely"
+      },
+      {
+        "icon": "🔤",
+        "title": "Opens instantly",
+        "text": "fonts now live inside the launcher: it doesn’t wait for the internet and starts right away"
+      },
+      {
+        "icon": "🎮",
+        "title": "Powerful graphics card",
+        "text": "on laptops with two graphics cards the launcher offers to run the game on the powerful one — Windows often picks the built-in one"
+      },
+      {
+        "icon": "⚡",
+        "title": "Smarter Optimization",
+        "text": "a list window: Sodium, Lithium and more — the essentials are ticked for you; on Forge, Embeddium is installed instead of Sodium"
+      },
+      {
+        "icon": "🎚️",
+        "title": "Graphics and tips",
+        "text": "economy, balanced or fancy graphics in one click, and the “⚡ N tips” badge on the instance card tells you what to adjust"
+      },
+      {
+        "icon": "🎀",
+        "title": "New installer",
+        "text": "a pixel landscape like on the instance card — and a night one for uninstalling"
+      }
+    ]
+  },
+  {
+    "version": "0.7.0",
+    "date": null,
+    "items": [
+      {
+        "icon": "🎀",
+        "title": "Новая главная",
+        "text": "выбранная сборка — большой карточкой с обложкой, значками (моды, миры, память, проверка перед запуском) и кнопкой «Играть»; котик выглядывает из-за неё"
+      },
+      {
+        "icon": "🫧",
+        "title": "Мягкий дизайн",
+        "text": "тонкая панель слева, пухлые кнопки с ушками, стеклянные карточки и ночные пейзажи в тёмных темах"
+      },
+      {
+        "icon": "💡",
+        "title": "Всё важное под рукой",
+        "text": "под карточкой — ближайший наряд, последняя копия мира и облако, а сборки лежат на полке плиток"
+      },
+      {
+        "icon": "🧭",
+        "title": "Настройки по разделам",
+        "text": "тема выбирается по миниатюрам, наряды показаны на самом котике, курсор — наглядно"
+      }
+    ],
+    "itemsEn": [
+      {
+        "icon": "🎀",
+        "title": "New home screen",
+        "text": "the selected instance gets a big card with a cover, badges (mods, worlds, memory, pre-launch check) and the “Play” button; the kitty peeks from behind it"
+      },
+      {
+        "icon": "🫧",
+        "title": "Softer design",
+        "text": "a slim bar on the left, puffy buttons with ears, glass cards and night landscapes in the dark themes"
+      },
+      {
+        "icon": "💡",
+        "title": "Everything at hand",
+        "text": "under the card: the next outfit, the latest world backup and the cloud — and your instances sit on a shelf of tiles"
+      },
+      {
+        "icon": "🧭",
+        "title": "Settings by section",
+        "text": "pick a theme from thumbnails, see outfits on the kitty itself, and preview cursors"
+      }
+    ]
+  },
+  {
+    "version": "0.6.4",
+    "date": null,
+    "items": [
+      {
+        "icon": "🐾",
+        "title": "Новый курсор",
+        "text": "лапка или мордочка котика в цвет темы — переключается в «Фон и котик»"
+      }
+    ],
+    "itemsEn": [
+      {
+        "icon": "🐾",
+        "title": "New cursor",
+        "text": "a paw or a kitty face in your theme color — switch it in “Background & kitty”"
+      }
+    ]
+  },
+  {
+    "version": "0.6.3",
+    "date": null,
+    "items": [
+      {
+        "icon": "🔓",
+        "title": "Друг без лицензии",
+        "text": "в «Играть с другом» можно пустить друга с офлайн-аккаунтом — лаунчер поставит LAN World Plug-n-Play и подскажет, что выключить"
+      },
+      {
+        "icon": "🛡️",
+        "title": "Только свои",
+        "text": "укажи ники друзей — когда мир откроется, лаунчер покажет готовые команды белого списка, чтобы чужие не зашли"
+      }
+    ],
+    "itemsEn": [
+      {
+        "icon": "🔓",
+        "title": "Friends without a license",
+        "text": "“Play with a friend” can now let in a friend with an offline account — the launcher adds LAN World Plug-n-Play and tells you what to turn off"
+      },
+      {
+        "icon": "🛡️",
+        "title": "Friends only",
+        "text": "enter your friends’ nicknames — when the world opens, the launcher shows ready whitelist commands so strangers can’t get in"
+      }
+    ]
+  },
+  {
+    "version": "0.6.2",
+    "date": null,
+    "items": [
+      {
+        "icon": "💞",
+        "title": "Играть с другом",
+        "text": "открой мир другу без настройки роутера: лаунчер ставит мод e4mc и сам копирует адрес"
+      },
+      {
+        "icon": "💌",
+        "title": "Поделиться сборкой",
+        "text": "файл сборки сразу в буфере обмена — вставь его в Discord или Telegram"
+      },
+      {
+        "icon": "🏆",
+        "title": "Достижения котика",
+        "text": "за игровые часы, модпаки и друзей — и новые наряды: очки, корона, венок, шарфик"
+      },
+      {
+        "icon": "💾",
+        "title": "Автокопии миров",
+        "text": "после игры мир сохраняется сам, восстановить можно в один клик"
+      },
+      {
+        "icon": "☁️",
+        "title": "Синхронизация",
+        "text": "сборки и миры одинаковые на всех компьютерах через Яндекс.Диск, OneDrive или Google Drive"
+      },
+      {
+        "icon": "🖥️",
+        "title": "Под твой компьютер",
+        "text": "лаунчер подберёт память и шейдеры под твоё железо"
+      },
+      {
+        "icon": "🌌",
+        "title": "Живые тёмные темы",
+        "text": "светлячки в тёмной теме, звёзды и падающие звёзды в «Полночи»"
+      }
+    ],
+    "itemsEn": [
+      {
+        "icon": "💞",
+        "title": "Play with a friend",
+        "text": "open your world to a friend with no router setup: the launcher installs e4mc and copies the address"
+      },
+      {
+        "icon": "💌",
+        "title": "Share an instance",
+        "text": "the instance file goes straight to the clipboard — paste it into Discord or Telegram"
+      },
+      {
+        "icon": "🏆",
+        "title": "Kitty achievements",
+        "text": "for play time, modpacks and friends — plus new outfits: glasses, crown, flower crown, scarf"
+      },
+      {
+        "icon": "💾",
+        "title": "World auto backups",
+        "text": "worlds are saved after playing and restored in one click"
+      },
+      {
+        "icon": "☁️",
+        "title": "Sync",
+        "text": "instances and worlds stay the same on all your computers via Yandex.Disk, OneDrive or Google Drive"
+      },
+      {
+        "icon": "🖥️",
+        "title": "Tuned to your PC",
+        "text": "the launcher picks memory and shaders for your hardware"
+      },
+      {
+        "icon": "🌌",
+        "title": "Living dark themes",
+        "text": "fireflies in the dark theme, stars and shooting stars in Midnight"
+      }
+    ]
+  },
+  {
+    "version": "0.6.1",
+    "date": null,
+    "items": [
+      {
+        "icon": "🧳",
+        "title": "Перенос из других лаунчеров",
+        "text": "сборки, миры и паки из TLauncher, Prism, CurseForge, Modrinth и других — в пару кликов; потом можно освободить место от старых копий"
+      },
+      {
+        "icon": "🎀",
+        "title": "Новый установщик",
+        "text": "розовый, с котиком и милыми текстами — а при удалении котик грустит"
+      },
+      {
+        "icon": "☁️",
+        "title": "Обновления с Яндекс.Диска",
+        "text": "приходят быстро и без VPN; portable-версия открывает папку с новой версией"
+      }
+    ],
+    "itemsEn": [
+      {
+        "icon": "🧳",
+        "title": "Move from other launchers",
+        "text": "instances, worlds and packs from TLauncher, Prism, CurseForge, Modrinth and more in a couple of clicks; then free up space from the old copies"
+      },
+      {
+        "icon": "🎀",
+        "title": "New installer",
+        "text": "pink, with the kitty and cute texts — and a sad kitty when uninstalling"
+      },
+      {
+        "icon": "☁️",
+        "title": "Updates from Yandex.Disk",
+        "text": "fast and no VPN needed; the portable version opens the folder with the new release"
+      }
+    ]
+  },
+  {
+    "version": "0.6.0",
+    "date": null,
+    "items": [
+      {
+        "icon": "🩺",
+        "title": "Проверка сборки перед запуском",
+        "text": "несовместимые моды, недостающие зависимости и дубли видно до старта игры — чинится в один клик"
+      },
+      {
+        "icon": "🧩",
+        "title": "Умная установка модов",
+        "text": "если мод не дружит только с версией соседа (Iris и Sodium), лаунчер сам подберёт подходящую"
+      },
+      {
+        "icon": "🎮",
+        "title": "Активность в Discord",
+        "text": "друзья видят сборку, версию и время в игре; выключается в Настройках"
+      },
+      {
+        "icon": "🌍",
+        "title": "English",
+        "text": "интерфейс на английском: Настройки → Оформление → Язык"
+      },
+      {
+        "icon": "💅",
+        "title": "Аккуратнее настройки",
+        "text": "карточки не растягиваются, кнопки тем помещаются"
+      }
+    ],
+    "itemsEn": [
+      {
+        "icon": "🩺",
+        "title": "Pre-launch check",
+        "text": "incompatible mods, missing dependencies and duplicates are shown before the game starts — fixed in one click"
+      },
+      {
+        "icon": "🧩",
+        "title": "Smarter mod installs",
+        "text": "if a mod only conflicts with a version of another (Iris and Sodium), the launcher picks a compatible one"
+      },
+      {
+        "icon": "🎮",
+        "title": "Discord activity",
+        "text": "friends see your instance, version and play time; turn it off in Settings"
+      },
+      {
+        "icon": "🌍",
+        "title": "English",
+        "text": "the whole interface in English: Settings → Appearance → Language"
+      },
+      {
+        "icon": "💅",
+        "title": "Tidier settings",
+        "text": "cards no longer stretch, theme buttons fit"
+      }
+    ]
+  }
+]

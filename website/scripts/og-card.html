@@ -1,0 +1,33 @@
+<!doctype html>
+<!-- Макет картинки предпросмотра ссылки (public/og.png, 1200×630). В сайт не попадает.
+     Чтобы обновить картинку: открой этот файл в браузере, окно 1200×630, сделай скриншот и сохрани как public/og.png. -->
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../public/fonts/fonts.css" />
+    <style>
+      html, body { margin: 0; width: 1200px; height: 630px; overflow: hidden; }
+      body {
+        position: relative; font-family: 'Nunito', sans-serif; color: #4a2b3a;
+        background: radial-gradient(700px 460px at 0% 0%, #ffc4dc 0, transparent 62%), radial-gradient(640px 420px at 100% 0%, #ffd9e6 0, transparent 60%),
+          radial-gradient(800px 500px at 60% 120%, #ffe1c9 0, transparent 62%), #fdeef4;
+      }
+      .copy { position: absolute; left: 72px; top: 92px; width: 470px; display: grid; gap: 22px; }
+      .mark { display: flex; align-items: center; gap: 16px; font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: 40px; color: #ad2f68; }
+      .mark img { width: 72px; height: 72px; }
+      h1 { margin: 0; font-family: 'Comfortaa', sans-serif; font-weight: 700; font-size: 62px; line-height: 1.06; letter-spacing: -0.02em; }
+      p { margin: 0; font-size: 26px; line-height: 1.4; color: #7d5368; font-weight: 600; }
+      .shot { position: absolute; left: 580px; top: 120px; width: 700px; border: 8px solid #fff; border-radius: 26px; overflow: hidden; transform: rotate(2deg);
+        box-shadow: 0 40px 80px -30px rgba(140, 50, 105, 0.55); }
+      .shot img { display: block; width: 100%; }
+    </style>
+  </head>
+  <body>
+    <div class="copy">
+      <div class="mark"><img src="../src/assets/logo.png" alt="" />Femboy Launcher</div>
+      <h1>Уютный уголок для&nbsp;твоего Minecraft</h1>
+      <p>Лаунчер для Windows: сборки, моды с Modrinth, помощь при вылетах</p>
+    </div>
+    <div class="shot"><img src="../src/assets/screenshots/03-instances-sakura.png" alt="" /></div>
+  </body>
+</html>

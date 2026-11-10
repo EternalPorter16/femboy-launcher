@@ -1,0 +1,558 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'none'; img-src 'self' https://mc-heads.net https://cdn.modrinth.com https://media.forgecdn.net https://textures.minecraft.net data: blob: file:; style-src 'self' 'unsafe-inline'; font-src 'self'; script-src 'self'">
+  <title>Femboy Launcher</title>
+  <link rel="stylesheet" href="fonts/fonts.css">
+  <link rel="stylesheet" href="style.css">
+  <script src="theme.js"></script>
+  <script src="i18n.js"></script>
+</head>
+<body>
+  <!-- Набор иконок: лапки, бантик, котоблок и т.д. Используются как <svg><use href="#i-…"/></svg> -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="i-block" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 9 6.5 3.5 10 8M14 8l3.5-4.5 2 5.5"/><path d="M4 8.5h16V19a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 19z"/><path d="M10.2 16q.9 1.1 1.8 0 .9 1.1 1.8 0"/></g><circle cx="9" cy="13" r="1.1" fill="currentColor"/><circle cx="15" cy="13" r="1.1" fill="currentColor"/></symbol>
+    <symbol id="i-mods" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M4 8h4.2a2.6 2.6 0 0 1 5.2 0H18v4.2a2.6 2.6 0 0 1 0 5.2V21H4z"/><path fill="currentColor" d="M10.5 13.3c-.6-1.2-2.6-.9-2.6.5 0 1.2 2.6 2.7 2.6 2.7s2.6-1.5 2.6-2.7c0-1.4-2-1.7-2.6-.5z"/></symbol>
+    <symbol id="i-paw" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12.4c-2.7 0-5.2 2.7-5.2 4.8 0 1.7 1.3 2.6 2.8 2.6 1 0 1.6-.5 2.4-.5s1.4.5 2.4.5c1.5 0 2.8-.9 2.8-2.6 0-2.1-2.5-4.8-5.2-4.8z"/><ellipse cx="6.2" cy="10.6" rx="1.8" ry="2.2" transform="rotate(-20 6.2 10.6)"/><ellipse cx="9.6" cy="6.6" rx="1.9" ry="2.4" transform="rotate(-8 9.6 6.6)"/><ellipse cx="14.4" cy="6.6" rx="1.9" ry="2.4" transform="rotate(8 14.4 6.6)"/><ellipse cx="17.8" cy="10.6" rx="1.8" ry="2.2" transform="rotate(20 17.8 10.6)"/></symbol>
+    <symbol id="i-chat" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v8a2.5 2.5 0 0 1-2.5 2.5H11l-4.5 3.5V17A2.5 2.5 0 0 1 4 14.5z"/><circle cx="9.3" cy="8.6" r="1.05" fill="currentColor"/><circle cx="9.3" cy="12.4" r="1.05" fill="currentColor"/><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M12.8 8.2c1.6-.8 3.1 0 2.6 1.4-.2.5-.8.7-1.3.7.8 0 1.6.5 1.4 1.4-.3 1.3-1.9 1.4-2.8.9"/></symbol>
+    <symbol id="i-bow" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.6 10.6C8.8 8 5.3 6 3.8 7.2c-1.4 1.1-.9 5.8.6 6.6 1.7 1 4.6-.9 6.2-3.2zM13.4 10.6c1.8-2.6 5.3-4.6 6.8-3.4 1.4 1.1.9 5.8-.6 6.6-1.7 1-4.6-.9-6.2-3.2zM10.8 12.6 8.4 19M13.2 12.6l2.4 6.4"/></g><circle cx="12" cy="11" r="1.9" fill="currentColor"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M3.5 7.5A2 2 0 0 1 5.5 5.5h3.7l2 2h7.3a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/><circle cx="12" cy="14.6" r="1.5" fill="currentColor"/><circle cx="9.7" cy="12" r=".8" fill="currentColor"/><circle cx="12" cy="11.2" r=".8" fill="currentColor"/><circle cx="14.3" cy="12" r=".8" fill="currentColor"/></symbol>
+    <symbol id="i-edit" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M4.5 19.5h3.8L19 8.8a2.4 2.4 0 0 0-3.4-3.4L4.9 16.1zM14.3 6.8l3.4 3.4"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M4.5 7h15M9.5 7V4.8h5V7M6.5 7l.9 12.2a1.5 1.5 0 0 0 1.5 1.3h6.2a1.5 1.5 0 0 0 1.5-1.3L17.5 7M10 11v5.5M14 11v5.5"/></symbol>
+    <symbol id="i-heart" viewBox="0 0 24 24"><path fill="currentColor" d="M12 7.2C10.7 4.5 5.5 4.6 5.5 8.9c0 3.9 6.5 8.4 6.5 8.4s6.5-4.5 6.5-8.4c0-4.3-5.2-4.4-6.5-1.7z"/></symbol>
+    <symbol id="i-more" viewBox="0 0 24 24" fill="currentColor"><circle cx="6" cy="12" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="18" cy="12" r="1.9"/></symbol>
+    <symbol id="i-import" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 3.5v11m0 0-4-4m4 4 4-4M5 15.5v2A2.5 2.5 0 0 0 7.5 20h9a2.5 2.5 0 0 0 2.5-2.5v-2"/></symbol>
+    <symbol id="i-bolt" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M13.5 3 5.5 13.5H11L10 21l8-10.5h-5.5z"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3M19.5 4.5v4h-4"/></symbol>
+    <symbol id="i-box" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 3.5 20 7.5v9L12 20.5 4 16.5v-9z"/><path d="M4 7.5 12 11.5l8-4M12 11.5v9"/></g><path fill="currentColor" d="M16 13.7c-.4-.8-1.6-.6-1.6.3 0 .8 1.6 1.7 1.6 1.7s1.6-.9 1.6-1.7c0-.9-1.2-1.1-1.6-.3z"/></symbol>
+    <symbol id="i-cloud" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M7 18.5a4.2 4.2 0 0 1-.6-8.4A5.6 5.6 0 0 1 17 8.8a4.9 4.9 0 0 1 .5 9.7z"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="11" width="13" height="9.5" rx="2.6"/><path d="M8.5 11V8.6a3.5 3.5 0 0 1 7 0V11"/></g></symbol>
+    <symbol id="i-sort" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" d="M5 7h14M8 12h8M11 17h2"/></symbol>
+    <symbol id="i-chev" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" d="M9 6l6 6-6 6"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+    <symbol id="i-warn" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" d="M12 6.5v7"/><circle cx="12" cy="17.6" r="1.4" fill="currentColor"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/></g></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-globe" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.5 2.6 3.6 5.4 3.6 8.5S14.5 17.9 12 20.5M12 3.5C9.5 6.1 8.4 8.9 8.4 12s1.1 5.9 3.6 8.5"/></g></symbol>
+    <symbol id="i-chip" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6.5" y="6.5" width="11" height="11" rx="2.6"/><path d="M10 3.5v3M14 3.5v3M10 17.5v3M14 17.5v3M3.5 10h3M3.5 14h3M17.5 10h3M17.5 14h3"/></g></symbol>
+    <symbol id="i-win-min" viewBox="0 0 14 14"><path d="M2 7h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+    <symbol id="i-win-max" viewBox="0 0 14 14"><rect x="2.3" y="2.3" width="9.4" height="9.4" rx="2.2" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
+    <symbol id="i-win-x" viewBox="0 0 14 14"><path d="M2.5 2.5l9 9M11.5 2.5l-9 9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+    <symbol id="i-handpaw" viewBox="0 0 34 30"><path d="M4 21C3.5 9 9 3.5 17 3.5S30.5 9 30 21c0 4.4-4 6.2-13 6.2S4.4 25.4 4 21z" fill="#fff" stroke="#231a29" stroke-width="3" stroke-linejoin="round"/><path d="M12.2 15.5v6.5M21.8 15.5v6.5" stroke="#231a29" stroke-width="2.4" stroke-linecap="round" fill="none"/></symbol>
+  </svg>
+
+  <div class="bg" aria-hidden="true"><div class="bg-image" id="bgImage"></div><i class="blob b1"></i><i class="blob b2"></i><i class="blob b3"></i></div>
+
+  <header class="titlebar">
+    <div class="brand"><span class="brand-cat" data-cat="head"></span>Femboy<span class="brand-sub">launcher</span></div>
+    <button class="update-pill" id="updatePill" hidden></button>
+    <div class="win-btns">
+      <button id="netDot" class="net-dot unknown" title="Связь ещё не проверялась. Нажми, чтобы проверить"><i></i></button>
+      <button id="wSearch" title="Быстрый поиск (Ctrl+K)"><svg><use href="#i-search"/></svg></button>
+      <button id="wMin" title="Свернуть"><svg><use href="#i-win-min"/></svg></button>
+      <button id="wMax" title="Развернуть"><svg><use href="#i-win-max"/></svg></button>
+      <button id="wClose" class="close" title="Закрыть"><svg><use href="#i-win-x"/></svg></button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <nav id="nav">
+        <span class="nav-indicator" id="navIndicator"></span>
+        <button class="nav-btn active" data-page="instances"><svg class="ico"><use href="#i-block"/></svg>Сборки</button>
+        <button class="nav-btn" data-page="mods"><svg class="ico"><use href="#i-mods"/></svg>Моды</button>
+        <button class="nav-btn" data-page="accounts"><svg class="ico"><use href="#i-paw"/></svg>Аккаунты</button>
+        <button class="nav-btn" data-page="console"><svg class="ico"><use href="#i-chat"/></svg>Консоль</button>
+        <button class="nav-btn" data-page="settings"><svg class="ico"><use href="#i-bow"/></svg>Настройки</button>
+      </nav>
+
+      <button class="me" id="meCard" title="Аккаунты"></button>
+    </aside>
+
+    <main class="content">
+      <!-- Сборки -->
+      <section class="page active" id="page-instances">
+        <div class="home-head">
+          <h1 id="hello">Привет ~</h1>
+          <p class="sub">Выбери сборку и нажми «Играть» ♡</p>
+        </div>
+
+        <!-- Выбранная сборка: большая карточка, из-за которой выглядывает котик -->
+        <div class="hero-wrap">
+          <div class="mascot" id="mascot" title="Погладить" data-sound="meow">
+            <div class="bubble hide" id="bubble"></div>
+            <div class="mascot-cat" data-cat="head"></div>
+            <svg class="paw pl" aria-hidden="true"><use href="#i-handpaw"/></svg>
+            <svg class="paw pr" aria-hidden="true"><use href="#i-handpaw"/></svg>
+          </div>
+          <div class="hero" id="hero">
+            <div class="scene" id="heroScene" aria-hidden="true"></div>
+            <div class="veil" aria-hidden="true"></div>
+            <div class="hero-body" id="heroBody"></div>
+          </div>
+        </div>
+
+        <div class="strip" id="homeStrip"></div>
+
+        <div class="shelf">
+          <div class="shelf-head">
+            <h2>Мои сборки <span class="count" id="instCount"></span></h2>
+            <div class="shelf-tools" id="shelfTools">
+              <div class="chips" id="instGroups"></div>
+              <label class="search-box"><svg class="bi"><use href="#i-search"/></svg><input id="instSearch" placeholder="Найти сборку…" spellcheck="false"></label>
+              <label class="sort-box" title="Сортировка"><svg class="bi"><use href="#i-sort"/></svg>
+                <select id="instSort" class="mini-select" title="Сортировка">
+                  <option value="recent">Недавние</option>
+                  <option value="name">По названию</option>
+                  <option value="playtime">Больше всего играли</option>
+                  <option value="version">По версии игры</option>
+                </select>
+              </label>
+            </div>
+            <div class="shelf-actions">
+              <button class="btn ghost with-ico" id="trashBtn" hidden title="Удалённые сборки: пока лаунчер открыт, их можно вернуть"><svg class="bi"><use href="#i-trash"/></svg>Корзина <span class="count" id="trashCount"></span></button>
+              <button class="btn ghost with-ico" id="importBtn" title="Импорт .mrpack, zip CurseForge или сборки Prism"><svg class="bi"><use href="#i-import"/></svg>Импорт</button>
+              <button class="btn ghost with-ico" id="browsePacksBtn"><svg class="bi"><use href="#i-box"/></svg>Модпаки</button>
+              <button class="btn soft with-ico" id="newInstBtn"><svg class="bi"><use href="#i-plus"/></svg>Новая сборка</button>
+            </div>
+          </div>
+          <div class="tiles" id="instGrid"></div>
+        </div>
+      </section>
+
+      <!-- Моды -->
+      <section class="page" id="page-mods">
+        <div class="page-head">
+          <div><h1>Моды</h1><p class="sub" id="modsSub">Ставь моды и модпаки прямо из лаунчера</p></div>
+          <label class="inst-pick"><span>Сборка</span><select id="modsInst"></select></label>
+        </div>
+        <div class="mods-bar">
+          <div class="seg" id="modsTab">
+            <button data-v="installed" class="on">Установленные</button>
+            <button data-v="modrinth">Modrinth</button>
+            <button data-v="curseforge">CurseForge</button>
+          </div>
+          <div class="seg small" id="modsType">
+            <button data-v="mod" class="on">Моды</button>
+            <button data-v="modpack">Модпаки</button>
+            <button data-v="resourcepack">Ресурспаки</button>
+            <button data-v="shader">Шейдеры</button>
+          </div>
+        </div>
+        <div class="mods-bar">
+          <input id="modsQuery" class="search" placeholder="Поиск… например, sodium" spellcheck="false">
+          <select id="modsCat" class="mini-select" title="Категория"><option value="">Все категории</option></select>
+          <select id="modsSort" class="mini-select" title="Сортировка">
+            <option value="">По умолчанию</option>
+            <option value="downloads">Популярные</option>
+            <option value="updated">Недавно обновлённые</option>
+            <option value="newest">Новые</option>
+          </select>
+          <button class="btn soft with-ico" id="modsUpdates" title="Проверить обновления модов"><svg class="bi"><use href="#i-refresh"/></svg>Обновления</button>
+          <button class="btn soft with-ico" id="modsOptimize" title="Поставить моды для FPS: Sodium, Lithium, FerriteCore…"><svg class="bi"><use href="#i-bolt"/></svg>Оптимизация</button>
+          <button class="btn soft with-ico" id="modsCollection" title="Поставить моды, ресурспаки и шейдеры из коллекции Modrinth по ссылке"><svg class="bi"><use href="#i-box"/></svg>Коллекция</button>
+          <button class="btn ghost icon-btn" id="modsFolder" title="Открыть папку"><svg class="bi"><use href="#i-folder"/></svg></button>
+        </div>
+        <div class="mods-note" id="modsNote"></div>
+        <div class="mod-list" id="modList"></div>
+        <div class="more-wrap"><button class="btn soft" id="modsMore">Показать ещё</button></div>
+      </section>
+
+      <!-- Аккаунты -->
+      <section class="page" id="page-accounts">
+        <div class="page-head"><div><h1>Аккаунты</h1><p class="sub">Лицензия через Microsoft, Ely.by или просто ник для оффлайна</p></div></div>
+        <div class="acc-add">
+          <div class="card add-card">
+            <div class="ms-logo"><i></i><i></i><i></i><i></i></div>
+            <h3>Microsoft</h3>
+            <p>Для лицензии и онлайн-серверов. Откроется окно входа.</p>
+            <button class="btn primary" id="msLogin">Войти через Microsoft</button>
+          </div>
+          <div class="card add-card">
+            <div class="big-emoji">🦊</div>
+            <h3>Ely.by</h3>
+            <p>Скины и серверы Ely.by. Нужен аккаунт на ely.by.</p>
+            <button class="btn soft" id="elyLogin">Войти через Ely.by</button>
+          </div>
+          <form class="card add-card" id="offlineForm" autocomplete="off">
+            <div class="big-emoji">🐾</div>
+            <h3>Оффлайн</h3>
+            <p>Придумай ник — играй в одиночке и на оффлайн-серверах.</p>
+            <div class="row">
+              <input id="offlineName" placeholder="Ник, напр. Boykisser_" maxlength="16" spellcheck="false">
+              <button class="btn soft" type="submit">Добавить</button>
+            </div>
+            <small class="hint" id="offlineHint">3–16 символов: A–Z, 0–9, _</small>
+          </form>
+        </div>
+        <h2 class="section-title">Мои аккаунты</h2>
+        <div class="acc-grid">
+          <div class="acc-list" id="accList"></div>
+          <div class="card skin-card" id="skinCard">
+            <div class="skin-card-head"><h3>Скин</h3><span class="badge" id="skinModel"></span></div>
+            <canvas id="skinView" class="skin-view"></canvas>
+            <p class="hint" id="skinNote"></p>
+            <div class="skin-actions" id="skinActions"></div>
+            <input type="file" id="skinFile" accept="image/png" hidden>
+          </div>
+        </div>
+      </section>
+
+      <!-- Консоль -->
+      <section class="page" id="page-console">
+        <div class="page-head">
+          <div><h1>Консоль</h1><p class="sub">Логи загрузки и игры</p></div>
+          <div class="row">
+            <input type="text" id="logFind" class="log-find" placeholder="Поиск по консоли…" spellcheck="false" autocomplete="off">
+            <span class="hint log-count" id="logCount" hidden></span>
+            <label class="check"><input type="checkbox" id="logErrors"> только ошибки</label>
+            <label class="check"><input type="checkbox" id="logDebug" checked> отладка</label>
+            <button class="btn soft" id="logCopy">Копировать</button>
+            <button class="btn soft" id="logShare">Поделиться</button>
+            <button class="btn ghost" id="logClear">Очистить</button>
+          </div>
+        </div>
+        <div class="console card" id="console"></div>
+      </section>
+
+      <!-- Настройки: слева разделы, справа карточки выбранного раздела -->
+      <section class="page" id="page-settings">
+        <div class="page-head"><div><h1>Настройки</h1><p class="sub">Всё сохраняется сразу ✧</p></div></div>
+        <div class="set">
+          <nav class="subnav" id="setNav">
+            <button data-sec="look" class="on"><svg class="bi"><use href="#i-bow"/></svg>Оформление</button>
+            <button data-sec="kitty"><svg class="bi"><use href="#i-paw"/></svg>Котик и награды</button>
+            <button data-sec="game"><svg class="bi"><use href="#i-bolt"/></svg>Игра и Java</button>
+            <button data-sec="cloud"><svg class="bi"><use href="#i-cloud"/></svg>Миры и облако</button>
+            <button data-sec="data"><svg class="bi"><use href="#i-import"/></svg>Место и переезд</button>
+            <button data-sec="about"><svg class="bi"><use href="#i-heart"/></svg>О лаунчере</button>
+          </nav>
+
+          <div class="set-main">
+            <!-- Оформление -->
+            <div class="set-sec on" data-sec="look">
+              <div class="card wide">
+                <h3>Тема <small>выбери настроение лаунчера</small></h3>
+                <div class="themes" id="themeSeg">
+                  <button data-v="light" class="th"><span class="mini-w" style="--m-bg:#f8f2f7;--m-gl:#ffffff;--m-ac:#e8609f;--m-h:linear-gradient(120deg,#ffd0e5,#e3d8ff)"><i class="r"></i><i class="h"></i><i class="t t1"></i><i class="t t2"></i><i class="t t3"></i><span class="ck"><svg><use href="#i-check"/></svg></span></span>Светлая</button>
+                  <button data-v="sakura" class="th"><span class="mini-w" style="--m-bg:#fdeef4;--m-gl:#ffffff;--m-ac:#e0558f;--m-h:linear-gradient(120deg,#ffc4dc,#ffe1c9)"><i class="r"></i><i class="h"></i><i class="t t1"></i><i class="t t2"></i><i class="t t3"></i><span class="ck"><svg><use href="#i-check"/></svg></span></span>Сакура</button>
+                  <button data-v="dark" class="th"><span class="mini-w" style="--m-bg:#1a1326;--m-gl:#2e2346;--m-ac:#d995ff;--m-h:linear-gradient(120deg,#4a2470,#25306c)"><i class="r"></i><i class="h"></i><i class="t t1"></i><i class="t t2"></i><i class="t t3"></i><span class="ck"><svg><use href="#i-check"/></svg></span></span>Тёмная</button>
+                  <button data-v="midnight" class="th"><span class="mini-w" style="--m-bg:#0d1124;--m-gl:#1c2442;--m-ac:#9a98ff;--m-h:linear-gradient(120deg,#26327a,#0f3a66)"><i class="r"></i><i class="h"></i><i class="t t1"></i><i class="t t2"></i><i class="t t3"></i><span class="ck"><svg><use href="#i-check"/></svg></span></span>Полночь</button>
+                  <button data-v="system" class="th"><span class="mini-w" style="--m-bg:linear-gradient(115deg,#f8f2f7 50%,#1a1326 50%);--m-gl:rgba(255,255,255,.75);--m-ac:#e8609f;--m-h:linear-gradient(120deg,#ffd0e5 50%,#3a2060 50%)"><i class="r"></i><i class="h"></i><i class="t t1"></i><i class="t t2"></i><i class="t t3"></i><span class="ck"><svg><use href="#i-check"/></svg></span></span>Как в системе</button>
+                </div>
+              </div>
+              <div class="set-cards">
+                <div class="card">
+                  <h3>Акцент</h3>
+                  <div class="swatches" id="accentSwatches">
+                    <button data-accent="pink" title="Розовый"></button>
+                    <button data-accent="lavender" title="Лавандовый"></button>
+                    <button data-accent="sky" title="Голубой"></button>
+                    <button data-accent="mint" title="Мятный"></button>
+                    <label class="swatch-custom" title="Свой цвет"><input type="color" id="accentCustom"><span>+</span></label>
+                  </div>
+                </div>
+                <div class="card">
+                  <h3>Курсор <small>цвет — как у акцента</small></h3>
+                  <div class="cursors" id="cursorSeg">
+                    <button data-v="paw" class="cu"><svg viewBox="0 0 32 32"></svg>Лапка</button>
+                    <button data-v="kitty" class="cu"><svg viewBox="0 0 32 32"></svg>Котик</button>
+                    <button data-v="system" class="cu"><svg viewBox="0 0 32 32"></svg>Обычный</button>
+                  </div>
+                </div>
+                <div class="card">
+                  <h3>Масштаб <small>Ctrl + «+», «−», «0»</small></h3>
+                  <div class="seg small" id="scaleSeg">
+                    <button data-v="90">90%</button>
+                    <button data-v="100">100%</button>
+                    <button data-v="110">110%</button>
+                    <button data-v="125">125%</button>
+                    <button data-v="150">150%</button>
+                  </div>
+                  <p class="hint">Делает всё в лаунчере крупнее или мельче; окно подстраивается. На большом мониторе удобно 125–150%.</p>
+                </div>
+                <div class="card">
+                  <h3>Анимации <small id="calmNote"></small></h3>
+                  <div class="field"><span>Движение</span>
+                    <div class="seg small" id="motionSeg">
+                      <button data-v="on">Включено</button>
+                      <button data-v="system">Как в Windows</button>
+                      <button data-v="off">Выключено</button>
+                    </div>
+                  </div>
+                  <div class="field"><span>Экономный режим</span>
+                    <div class="seg small" id="ecoSeg">
+                      <button data-v="auto">На батарее</button>
+                      <button data-v="on">Всегда</button>
+                      <button data-v="off">Выключен</button>
+                    </div>
+                  </div>
+                  <p class="hint">Экономный режим убирает лепестки, светлячков и звёзды и вечные анимации — ноутбук дольше живёт от батареи. Когда лаунчер просто открыт и ты ничего не делаешь, он и так засыпает; мышка его будит.</p>
+                </div>
+                <div class="card">
+                  <h3>Фон</h3>
+                  <div class="row bg-row">
+                    <button class="btn soft" id="bgPick">Выбрать картинку</button>
+                    <button class="btn ghost" id="bgClear">Убрать</button>
+                  </div>
+                  <label class="field"><span>Видимость фона: <b id="bgOpacityVal"></b></span><input type="range" id="bgOpacity" min="5" max="100" step="5"></label>
+                  <label class="field"><span>Размытие: <b id="bgBlurVal"></b></span><input type="range" id="bgBlur" min="0" max="20" step="1"></label>
+                </div>
+                <div class="card">
+                  <h3>Язык и звуки</h3>
+                  <div class="field"><span>Язык / Language</span>
+                    <div class="seg small" id="langSeg">
+                      <button data-v="ru">Русский</button>
+                      <button data-v="en">English</button>
+                    </div>
+                  </div>
+                  <label class="toggle sound-toggle"><input type="checkbox" id="soundOn"><span class="knob"></span>Звуки интерфейса</label>
+                  <label class="field sound-vol"><span>Громкость: <b id="soundVolVal"></b></span><input type="range" id="soundVol" min="0" max="100" step="5"></label>
+                </div>
+              </div>
+            </div>
+
+            <!-- Котик и награды -->
+            <div class="set-sec" data-sec="kitty">
+              <div class="card wide" id="playStats">
+                <h3>Время в игре 📊 <small id="psSince"></small></h3>
+                <div id="psBody"><p class="hint">Считаю…</p></div>
+              </div>
+              <div class="card wide">
+                <h3>Наряды котика <small id="outfitCount"></small></h3>
+                <div class="outfits" id="accSeg">
+                  <button data-v="none" class="oc" data-acc="none"><span class="cat-slot" data-cat="head"></span>Без</button>
+                  <button data-v="bow" class="oc" data-acc="bow"><span class="cat-slot" data-cat="head"></span>Бантик</button>
+                  <button data-v="phones" class="oc" data-acc="phones"><span class="cat-slot" data-cat="head"></span>Наушники</button>
+                  <button data-v="hat" class="oc" data-acc="hat"><span class="cat-slot" data-cat="head"></span>Шапочка</button>
+                  <button data-v="glasses" class="oc" data-acc="glasses" data-reward><span class="cat-slot" data-cat="head"></span>Очки<i class="lk"><svg><use href="#i-lock"/></svg></i></button>
+                  <button data-v="crown" class="oc" data-acc="crown" data-reward><span class="cat-slot" data-cat="head"></span>Корона<i class="lk"><svg><use href="#i-lock"/></svg></i></button>
+                  <button data-v="flower" class="oc" data-acc="flower" data-reward><span class="cat-slot" data-cat="head"></span>Венок<i class="lk"><svg><use href="#i-lock"/></svg></i></button>
+                  <button data-v="scarf" class="oc" data-acc="scarf" data-reward><span class="cat-slot" data-cat="head"></span>Шарфик<i class="lk"><svg><use href="#i-lock"/></svg></i></button>
+                </div>
+              </div>
+              <div class="set-cards">
+                <div class="card">
+                  <h3>Праздники и фразы</h3>
+                  <label class="toggle"><input type="checkbox" id="seasonal"><span class="knob"></span>Сезонное оформление (наряды, снег, фразы)</label>
+                  <label class="field cat-phrases"><span>Свои фразы котика — по одной в строке</span><textarea id="catPhrases" rows="4" maxlength="1500" placeholder="ты сегодня очень милый 😳&#10;пойдём строить домик?"></textarea></label>
+                </div>
+                <div class="card">
+                  <h3>Достижения котика</h3>
+                  <p class="hint">Некоторые дарят котику новый наряд ♡</p>
+                  <div class="ach-grid" id="achGrid"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Игра и Java -->
+            <div class="set-sec" data-sec="game">
+              <div class="set-cards">
+                <div class="card">
+                  <h3>Память</h3>
+                  <label class="field"><span>Максимум: <b id="maxRamVal"></b></span><input type="range" id="maxRam" min="1024" step="256"></label>
+                  <label class="field"><span>Минимум: <b id="minRamVal"></b></span><input type="range" id="minRam" min="512" step="256"></label>
+                  <small class="hint" id="ramHint"></small>
+                </div>
+                <div class="card">
+                  <h3>Под твой компьютер</h3>
+                  <div id="hwInfo"><p class="hint">Смотрю на железо…</p></div>
+                  <div class="row bg-row"><button class="btn soft" id="hwApply" disabled>Поставить рекомендуемую память</button></div>
+                </div>
+                <div class="card" id="gpuCard" hidden>
+                  <h3>Видеокарта для игры</h3>
+                  <label class="toggle"><input type="checkbox" id="gpuHigh"><span class="knob"></span>Запускать игру на мощной видеокарте</label>
+                  <p class="hint" id="gpuNames"></p>
+                  <p class="hint">Когда в компьютере две видеокарты, Windows часто запускает Minecraft на слабой встроенной, и кадров мало. Эта настройка записывает в «Параметры графики» Windows «высокая производительность» для Java, которую запускает лаунчер. Выключишь — всё вернётся как было.</p>
+                </div>
+                <div class="card">
+                  <h3>Java</h3>
+                  <label class="field"><span>Путь к java (пусто = скачать автоматически)</span><input id="javaPath" placeholder="авто ♡" spellcheck="false"></label>
+                  <label class="field"><span>Доп. аргументы JVM</span><input id="jvmArgs" placeholder="-XX:+UseG1GC" spellcheck="false"></label>
+                </div>
+                <div class="card">
+                  <h3>Запуск и загрузки</h3>
+                  <label class="toggle"><input type="checkbox" id="closeOnLaunch"><span class="knob"></span>Прятать лаунчер, пока идёт игра</label>
+                  <div class="field src-field"><span>Откуда качать файлы игры, Forge и Fabric</span>
+                    <div class="seg small" id="srcSeg">
+                      <button data-v="auto">Авто</button>
+                      <button data-v="official">Только официальные</button>
+                      <button data-v="mirror">Сначала зеркало</button>
+                    </div>
+                  </div>
+                  <p class="hint">«Авто»: сначала официальные серверы, а если они тормозят или недоступны — зеркало BMCLAPI. Файлы с зеркала проверяются по хэшам, но само зеркало — сторонний сервис.</p>
+                  <label class="field"><span>Свой прокси для загрузок (пусто — как настроен Windows)</span><input id="proxy" placeholder="http://127.0.0.1:10809 или socks5://127.0.0.1:1080" spellcheck="false"></label>
+                  <p class="hint">Обычно вписывать ничего не нужно: лаунчер ходит в сеть так же, как браузер, то есть через прокси или VPN из настроек Windows. Свой адрес нужен, только если интернет есть лишь через конкретный прокси.</p>
+                  <label class="toggle"><input type="checkbox" id="gameProxy"><span class="knob"></span>Передавать игре прокси лаунчера</label>
+                  <p class="hint">Java сама системный прокси не видит. Если интернет есть только через прокси или VPN, лаунчер передаёт его игре, чтобы моды вроде e4mc могли выйти в сеть. Выключи, если из-за этого что-то в игре не работает: тогда игра пойдёт в сеть напрямую.</p>
+                  <label class="toggle"><input type="checkbox" id="readinessCheck"><span class="knob"></span>Подсказывать, когда моды готовы к новой версии Minecraft</label>
+                  <p class="hint">Раз в сутки лаунчер в фоне спрашивает у Modrinth, сколько модов каждой сборки уже вышло под самую свежую версию игры, и показывает значок «🚀 версия: готовы N из M модов» (по нему открывается перенос). На Modrinth уходят хэши файлов модов, как и при проверке обновлений; ничего не скачивается и не меняется. Выключи, если не нужно.</p>
+                  <label class="toggle"><input type="checkbox" id="modUpdatesCheck"><span class="knob"></span>Подсказывать, когда вышли обновления модов</label>
+                  <p class="hint">Раз в сутки лаунчер в фоне спрашивает у Modrinth, вышли ли новые версии модов каждой сборки, и показывает на карточке значок «N обновлений модов»: по нему открывается окно «Обновить моды» с описанием изменений. Сам ничего не ставит и не скачивает; на Modrinth уходят хэши файлов модов, как и при ручной проверке. Выключи, если не нужно.</p>
+                  <div class="row bg-row"><button class="btn soft" id="netCheck">Проверить связь</button></div>
+                </div>
+                <div class="card">
+                  <h3>CurseForge</h3>
+                  <label class="field"><span>Личный API-ключ (без него CurseForge не пускает лаунчеры)</span><input id="cfApiKey" type="password" placeholder="$2a$10$…" spellcheck="false"></label>
+                  <small class="hint">Получить бесплатно: <a href="https://console.curseforge.com/" target="_blank">console.curseforge.com</a> → API keys. Modrinth работает без ключа.</small>
+                </div>
+                <div class="card">
+                  <h3>Discord</h3>
+                  <label class="toggle"><input type="checkbox" id="discordRpc"><span class="knob"></span>Показывать игру в Discord</label>
+                  <label class="toggle"><input type="checkbox" id="discordHideServer"><span class="knob"></span>Не показывать адрес сервера</label>
+                  <small class="hint" id="discordHint"></small>
+                </div>
+                <div class="card">
+                  <h3>Играть с другом</h3>
+                  <label class="toggle"><input type="checkbox" id="clearWhitelist"><span class="knob"></span>Очищать белый список после закрытия мира</label>
+                  <small class="hint">Друзья, которых ты пускал в мир, не остаются в списке: в следующий мир их нужно добавить заново. Список очищается и когда закрывается игра.</small>
+                  <label class="toggle"><input type="checkbox" id="backupBeforeFriends"><span class="knob"></span>Копия мира перед открытием для друзей</label>
+                  <small class="hint">Когда ты открываешь мир для друзей по сети, лаунчер сохраняет его копию (во вкладке «Миры» она подписана «автокопия»). Если в гостях что-то сломают, мир можно вернуть таким, каким он был до них.</small>
+                </div>
+              </div>
+            </div>
+
+            <!-- Миры и облако -->
+            <div class="set-sec" data-sec="cloud">
+              <div class="set-cards">
+                <div class="card">
+                  <h3>Копии миров</h3>
+                  <div class="field"><span>Сохранять копию мира после игры</span>
+                    <div class="seg small" id="backupSeg">
+                      <button data-v="session">Каждый раз</button>
+                      <button data-v="daily">Раз в день</button>
+                      <button data-v="off">Не нужно</button>
+                    </div>
+                  </div>
+                  <label class="field"><span>Сколько автокопий каждого мира хранить</span>
+                    <select id="backupKeep"><option value="3">3</option><option value="5">5</option><option value="10">10</option><option value="20">20</option></select></label>
+                  <p class="hint">Копии лежат в папке сборки, восстановить их можно в окне сборки на вкладке «Миры». Твои ручные копии лаунчер не удаляет.</p>
+                </div>
+                <div class="card">
+                  <h3>Синхронизация</h3>
+                  <p class="hint" id="syncInfo"></p>
+                  <div class="row bg-row">
+                    <button class="btn soft" id="syncPick">Выбрать папку облака…</button>
+                    <button class="btn ghost" id="syncNow">Синхронизировать</button>
+                    <button class="btn ghost" id="syncOff">Выключить</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Место и переезд -->
+            <div class="set-sec" data-sec="data">
+              <div class="set-cards">
+                <div class="card">
+                  <h3>Место на диске</h3>
+                  <div id="storageBody"><p class="hint">Посмотри, сколько занимают Java, версии и ресурсы игры, и убери то, что не нужно ни одной сборке.</p></div>
+                  <div class="row bg-row">
+                    <button class="btn soft" id="storageScan">Посчитать</button>
+                    <button class="btn primary" id="storageClean" disabled>Очистить неиспользуемое</button>
+                  </div>
+                  <h3 class="sub-h">Одинаковые моды</h3>
+                  <p class="hint">Один и тот же мод часто лежит сразу в нескольких сборках. Лаунчер может хранить его одним файлом: в каждой сборке всё остаётся как есть, а места нужно меньше. Если потом заменить такой файл вручную поверх (а не удалить и положить новый), он изменится сразу во всех сборках.</p>
+                  <p class="hint" id="dedupeInfo"></p>
+                  <div class="row bg-row">
+                    <button class="btn soft" id="dedupeScan">Найти одинаковые моды</button>
+                    <button class="btn primary" id="dedupeGo" hidden disabled>Объединить</button>
+                  </div>
+                </div>
+                <div class="card">
+                  <h3>Другие лаунчеры</h3>
+                  <p class="hint">Перенеси миры, сборки и паки из Legacy Launcher (TL Legacy), TLauncher, Prism, CurseForge и других: я найду их сама, даже если лаунчер лежит в «Загрузках» или на другом диске. Потом, если захочешь, освободи место от старых копий.</p>
+                  <div class="row bg-row">
+                    <button class="btn soft" id="otherImport">Перенести…</button>
+                    <button class="btn ghost" id="otherFree">Освободить место</button>
+                  </div>
+                  <label class="toggle"><input type="checkbox" id="importOffer"><span class="knob"></span>Предлагать перенос, когда найду другой лаунчер</label>
+                </div>
+              </div>
+            </div>
+
+            <!-- О лаунчере -->
+            <div class="set-sec" data-sec="about">
+              <div class="set-cards">
+                <div class="card">
+                  <h3>Обновления</h3>
+                  <p class="update-line">Версия лаунчера: <b id="appVersion"></b></p>
+                  <p class="hint" id="updateText"></p>
+                  <button class="btn soft" id="updateCheck">Проверить обновления</button>
+                </div>
+                <div class="card">
+                  <h3>Файлы</h3>
+                  <p class="hint" id="dataDir"></p>
+                  <p class="hint" id="portableNote" hidden></p>
+                  <div class="row bg-row"><button class="btn soft" id="openData">Открыть папку лаунчера</button><button class="btn soft" id="openLog" title="Ход запуска, ошибки и события лаунчера">Открыть лог лаунчера</button></div>
+                </div>
+                <div class="card">
+                  <h3>Отчёт для поддержки</h3>
+                  <p class="hint">Если что-то не работает и ты просишь помощи: одна кнопка собирает ZIP с версиями, железом, Java, проверкой связи, логами и списком модов выбранной сборки. Паролей и токенов в нём нет, имя пользователя Windows и адреса серверов убраны. Файл остаётся у тебя: сам решай, кому его показать.</p>
+                  <button class="btn soft" id="reportBuild">Собрать отчёт</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <footer class="playbar card">
+        <div class="pb-inst" id="pbInst"></div>
+        <div class="pb-progress" id="pbProgress">
+          <div class="pb-head"><div class="pb-label" id="pbLabel"></div><button class="pb-cancel" id="pbCancel" type="button">Отменить</button></div>
+          <div class="bar"><div class="fill" id="pbFill"></div></div>
+        </div>
+        <button class="play-btn" id="playBtn" data-sound="open"><span class="ears" aria-hidden="true"><i></i><i></i></span><span class="shine" aria-hidden="true"></span><svg class="heart"><use href="#i-paw"/></svg><span class="play-text">Играть</span></button>
+      </footer>
+    </main>
+  </div>
+
+  <div class="drop-overlay" id="dropOverlay" aria-hidden="true">
+    <div class="drop-card">
+      <div class="drop-cat" data-cat></div>
+      <b id="dropTitle">Отпусти — я всё разложу ♡</b>
+      <span id="dropHint">Моды .jar, ресурспаки и шейдеры .zip, модпаки .mrpack, скины .png</span>
+    </div>
+  </div>
+  <div class="modal" id="modal"><div class="modal-box card" id="modalBox"></div></div>
+  <div class="toasts" id="toasts"></div>
+  <script src="sounds.js"></script>
+  <script src="cat.js"></script>
+  <script src="calm.js"></script>
+  <script src="../../node_modules/skinview3d/bundles/skinview3d.bundle.js"></script>
+  <script src="skin-editor.js"></script>
+  <script src="whatsnew.js"></script>
+  <script src="updatenotes.js"></script>
+  <script src="scenes.js"></script>
+  <script src="bisect.js"></script>
+  <!-- Интерфейс (app/) — один скрипт, разрезанный по темам: общая область видимости, порядок важен (core.js первым, start.js последним) -->
+  <script src="app/core.js"></script>
+  <script src="app/look.js"></script>
+  <script src="app/shell.js"></script>
+  <script src="app/home.js"></script>
+  <script src="app/modals.js"></script>
+  <script src="app/import.js"></script>
+  <script src="app/details.js"></script>
+  <script src="app/migrate.js"></script>
+  <script src="app/java.js"></script>
+  <script src="app/restore.js"></script>
+  <script src="app/friends.js"></script>
+  <script src="app/join.js"></script>
+  <script src="app/achievements.js"></script>
+  <script src="app/recap.js"></script>
+  <script src="app/collection.js"></script>
+  <script src="app/sync-hardware.js"></script>
+  <script src="app/mods.js"></script>
+  <script src="app/accounts.js"></script>
+  <script src="app/settings.js"></script>
+  <script src="app/console.js"></script>
+  <script src="app/launch.js"></script>
+  <script src="app/launch-dialogs.js"></script>
+  <script src="app/events.js"></script>
+  <script src="app/dropzone.js"></script>
+  <script src="app/start.js"></script>
+  <script src="palette.js"></script>
+</body>
+</html>

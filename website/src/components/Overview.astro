@@ -1,0 +1,32 @@
+---
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+---
+
+<section class="section overview" id="overview" aria-labelledby="overview-title">
+  <div class="wrap">
+    <div class="section-head">
+      <h2 id="overview-title">Лаунчер за 25 секунд</h2>
+      <p>Сборки, моды, проверка перед запуском и две темы. Короткий обзор на настоящих скриншотах интерфейса.</p>
+    </div>
+    <div class="overview-frame">
+      <video controls playsinline preload="none" width="1920" height="1080" poster={`${base}media/launcher-overview.jpg`} aria-label="Видеообзор Femboy Launcher" aria-describedby="overview-caption">
+        <source src={`${base}media/launcher-overview-music.mp4`} type="video/mp4" />
+        <track kind="captions" src={`${base}media/launcher-overview.en.vtt`} srclang="en" label="English captions" default={Astro.url.pathname.includes('/en/')} />
+        <track kind="captions" src={`${base}media/launcher-overview.ru.vtt`} srclang="ru" label="Русские подписи" />
+        <p>Браузер не поддерживает просмотр видео. <a href={`${base}media/launcher-overview-music.mp4`}>Открыть видеообзор</a>.</p>
+      </video>
+    </div>
+    <p class="overview-caption" id="overview-caption">Монтаж скриншотов с фоновой музыкой. Основные возможности подписаны в кадре; видео запускается по нажатию.</p>
+    <p class="overview-caption">Музыка: «Dream Culture» — Kevin MacLeod (<a href="https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1300046">incompetech.com</a>), <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>. Использован фрагмент с изменённой громкостью и плавным началом и окончанием.</p>
+    <details class="overview-transcript">
+      <summary>Краткое содержание ролика</summary>
+      <ol>
+        <li><strong>Сборки.</strong> Vanilla, Fabric, Quilt, Forge и NeoForge в одном лаунчере.</li>
+        <li><strong>Моды.</strong> Каталог Modrinth и установка необходимых зависимостей.</li>
+        <li><strong>Проверка перед запуском.</strong> Подсказки о недостающих и конфликтующих модах.</li>
+        <li><strong>Темы.</strong> Светлая «Сакура» и тёмная «Полночь».</li>
+        <li><strong>Скачивание.</strong> Установщик и Portable для Windows 10 и 11, 64-битных.</li>
+      </ol>
+    </details>
+  </div>
+</section>

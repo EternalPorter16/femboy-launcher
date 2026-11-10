@@ -1,0 +1,100 @@
+---
+import config from '../config/downloads.json';
+import site from '../config/site.json';
+import { resolveDownloads } from '../lib/downloads.js';
+import Icon from './Icon.astro';
+
+const d = resolveDownloads(config);
+const report = `Версия лаунчера: ${d.version || 'укажи версию'}
+Windows и разрядность:
+Установщик или Portable:
+Что нажал перед ошибкой:
+Точный текст ошибки:
+Что уже попробовал:`;
+---
+
+<section class="section help" id="help" aria-labelledby="help-title">
+  <div class="wrap faq-layout">
+    <div class="section-head">
+      <span class="help-symbol"><Icon name="restore" /></span>
+      <h2 id="help-title">Не получается запустить?</h2>
+      <p>От скачивания до первого открытия. Выбери, на каком шаге возникла проблема.</p>
+      <a href={`https://t.me/${site.contacts.telegram}`} target="_blank" rel="noopener" class="help-contact"><Icon name="telegram" />Написать разработчику</a>
+    </div>
+    <div class="help-content">
+      <div class="faq">
+        <details id="help-download">
+          <summary>Скачивание не начинается или открывается ошибка</summary>
+          <div class="answer">
+            <ol>
+              <li>Открой сайт в обычном браузере, если сейчас он открыт внутри другого приложения.</li>
+              <li>Вернись к <a href="#download">кнопкам скачивания</a> и нажми нужную ещё раз: файл скачивается по прямой ссылке с нашего сервера загрузок.</li>
+              {d.storage.folderUrl && <li>Если снова ошибка, <a href={d.storage.folderUrl} target="_blank" rel="noopener">открой папку на Яндекс.Диске</a> и скачай файл оттуда. Имена текущих файлов указаны под кнопками на сайте.</li>}
+            </ol>
+            <p>Если не работает и папка, напиши разработчику: укажи браузер и приложи снимок ошибки.</p>
+          </div>
+        </details>
+        <details id="help-update-429">
+          <summary>Старая версия не обновляется: 429 / Too Many Requests</summary>
+          <div class="answer">
+            <p>Если при проверке обновлений лаунчер показывает <code>429 TOO MANY REQUESTS</code> и адрес <code>cloud-api.yandex.net</code>, старый канал Яндекс.Диска временно ограничил запросы. Такое возможно, например, в версии 0.9.0. Это не означает, что твои сборки повреждены.</p>
+            <p>Чтобы перейти на новый сервер обновлений, один раз установи актуальную версию вручную:</p>
+            <ol>
+              <li>Закрой Minecraft и лаунчер, в том числе значок лаунчера в области уведомлений Windows, если он остался.</li>
+              <li>Открой <a href="#download">раздел скачивания</a> и скачай <strong>установщик (Setup)</strong> с этого сайта.</li>
+              <li>Запусти установщик и установи лаунчер поверх прежнего, для того же пользователя Windows. Предварительно удалять лаунчер и его папку данных не нужно: при обычной установке поверх сборки, миры и настройки сохраняются.</li>
+              <li>Открой лаунчер через ярлык и проверь версию в «Настройки → О лаунчере». Для установленной версии следующие обновления будут загружаться с <code>downloads.femboylauncher.ru</code>.</li>
+            </ol>
+            <p><strong>Если у тебя Portable:</strong> закрой игру и лаунчер, скачай новый Portable EXE и положи его в прежнюю папку рядом с <code>data</code>. Папку <code>data</code> сохрани — в ней твои данные. Portable не устанавливает обновления автоматически. Если прежде данные оставались в профиле Windows, вручную создавать пустую <code>data</code> не нужно.</p>
+            <p>Если ошибка другая или после установки не появились прежние сборки, не удаляй старые папки: напиши разработчику и укажи прежнюю версию и тип лаунчера.</p>
+          </div>
+        </details>
+        <details id="help-windows">
+          <summary>Windows пишет «Windows защитил ваш компьютер»</summary>
+          <div class="answer">
+            <p>У лаунчера пока нет цифровой подписи. SmartScreen может показывать предупреждение о неизвестном приложении.</p>
+            <ol>
+              <li>Проверь, что файл скачан по кнопке на этом сайте или из указанной здесь папки Яндекс.Диска.</li>
+              <li>В <a href="#download">разделе скачивания</a> раскрой «Контрольная сумма SHA-256»: там есть команда проверки. Полученное значение должно совпасть с указанным на сайте.</li>
+              <li>Если источник и сумма проверены и ты решил запустить файл, нажми «Подробнее», затем «Выполнить в любом случае».</li>
+            </ol>
+            <p>Если такой кнопки нет или сообщение другое, пришли его разработчику — порядок действий может отличаться.</p>
+          </div>
+        </details>
+        <details id="help-antivirus">
+          <summary>Антивирус заблокировал или удалил файл</summary>
+          <div class="answer">
+            <p>Открой «Безопасность Windows» → «Защита от вирусов и угроз» → «Журнал защиты». Если используешь другой антивирус, посмотри его журнал или карантин.</p>
+            <p>Скопируй название обнаружения и имя файла, сделай снимок сообщения и отправь разработчику. Одного предупреждения недостаточно, чтобы определить причину; отключать защиту целиком для проверки не нужно.</p>
+            <p><a href="https://support.microsoft.com/en-us/windows/security/windows-security/protection-history-in-the-windows-security-app" target="_blank" rel="noopener">Как открыть журнал защиты — справка Microsoft</a></p>
+          </div>
+        </details>
+        <details id="help-launch">
+          <summary>Файл скачался, но лаунчер не открывается</summary>
+          <div class="answer">
+            <ol>
+              <li>Проверь систему: поддерживаются Windows 10 и 11, 64-битные. Windows 7, 8 и 8.1, macOS и Linux не поддерживаются.</li>
+              <li>Сверь SHA-256 в <a href="#download">разделе скачивания</a>. Если сумма отличается, скачай файл заново.</li>
+              <li>Для установщика дождись завершения установки, затем открой лаунчер через созданный ярлык. Для Portable выбери папку с доступом на запись: рядом с файлом он создаёт папку <code>data</code>.</li>
+            </ol>
+            <p>Если окно не появляется или сразу закрывается, отправь сведения по шаблону ниже. Java для самого открытия лаунчера отдельно устанавливать не требуется.</p>
+          </div>
+        </details>
+      </div>
+      <div class="help-report">
+        <h3>Не помогло? Разберёмся вместе</h3>
+        <p>Напиши в Telegram или Discord. Шаблон поможет сразу передать нужные подробности; к сообщению можно приложить снимок ошибки.</p>
+        <details class="help-template">
+          <summary>Шаблон сообщения</summary>
+          <pre id="support-report">{report}</pre>
+          <button class="btn btn-soft" type="button" data-copy="support-report" aria-label="Скопировать шаблон сообщения об ошибке"><Icon name="copy" /><span aria-live="polite">Скопировать</span></button>
+        </details>
+        <div class="help-actions">
+          <a class="btn btn-soft" href={`https://t.me/${site.contacts.telegram}`} target="_blank" rel="noopener"><Icon name="telegram" />Telegram</a>
+          <a class="help-discord" href="#contacts-title"><Icon name="discord" />Discord: {site.contacts.discord}</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+

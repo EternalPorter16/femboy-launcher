@@ -1,0 +1,32 @@
+{
+  "release": {
+    "version": "0.10.2",
+    "date": "2026-11-08",
+    "highlights": [
+      "Зима с 1 декабря",
+      "Наряды по календарю",
+      "Твои настройки важнее"
+    ]
+  },
+  "storage": {
+    "provider": "object-storage",
+    "label": "Яндекс.Диск",
+    "where": "на Яндекс.Диске",
+    "folderUrl": "https://disk.yandex.ru/d/lVJoM6m6kR5sxQ",
+    "fileUrlTemplate": "https://downloads.femboylauncher.ru/{fileName}"
+  },
+  "files": {
+    "setup": {
+      "fileName": "FemboyLauncher-Setup-{version}.exe",
+      "url": "",
+      "sizeBytes": 77116987,
+      "sha256": "dd779df22826f165931a66bfa90497a9fc307200d9a2aade325490aa80680ae3"
+    },
+    "portable": {
+      "fileName": "FemboyLauncher-Portable-{version}.exe",
+      "url": "",
+      "sizeBytes": 76871045,
+      "sha256": "e79611abf1c19af3d2b68a20eb19a079b4920ba7048dfc643f7137b83561d94c"
+    }
+  }
+}

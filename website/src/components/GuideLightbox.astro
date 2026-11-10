@@ -1,0 +1,18 @@
+---
+import Icon from './Icon.astro';
+---
+<dialog class="lightbox" id="lightbox" aria-labelledby="lb-caption">
+  <div class="lb-stage">
+    <img id="lb-img" src="data:," alt="" width="2000" height="1279" />
+    <button class="lb-btn lb-close" type="button" data-lb-close aria-label="Закрыть (Escape)"><Icon name="close" /></button>
+  </div>
+  <div class="lb-bar">
+    <p class="lb-caption" id="lb-caption"></p>
+    <span class="lb-count" id="lb-count" aria-live="polite"></span>
+    <div class="lb-nav">
+      <button class="lb-btn" type="button" data-lb-prev aria-label="Предыдущий скриншот"><Icon name="prev" /></button>
+      <button class="lb-btn" type="button" data-lb-next aria-label="Следующий скриншот"><Icon name="next" /></button>
+    </div>
+  </div>
+</dialog>
+

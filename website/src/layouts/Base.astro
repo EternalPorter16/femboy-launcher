@@ -1,0 +1,78 @@
+---
+import '../styles/global.css';
+import site from '../config/site.json';
+
+interface Props {
+  title?: string;
+  description?: string;
+  noindex?: boolean;
+}
+const { title = site.title, description = site.description, noindex = false } = Astro.props;
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+const asset = (p: string) => base + p.replace(/^\//, '');
+// Абсолютные адреса только если адрес сайта задан (astro.config.mjs → site)
+const abs = (p: string) => (Astro.site ? new URL(asset(p), Astro.site).href : asset(p));
+// У служебной страницы (404) канонической ссылки нет
+const path = Astro.url.pathname.slice(base.length).replace(/^en\/?/, '');
+const alternates = Astro.site && !noindex ? ['ru', 'en'].map(lang => ({lang, href: new URL(base + (lang === 'en' ? 'en/' : '') + path, Astro.site).href})) : [];
+const english = Astro.url.pathname.startsWith(base + 'en/');
+const canonical = Astro.site && !noindex ? new URL(Astro.url.pathname, Astro.site).href : null;
+---
+
+<!doctype html>
+<html lang="ru" data-theme="sakura">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <meta name="google-site-verification" content="68xca331-bOfukAVv95VcJHE8-wnAc29fI_lQj8DRS4" />
+    <meta name="google-site-verification" content="C_9MQ-Ndj4Yzhl4Aa595pjJsr7J4FEoMb4EFUl7DnLU" />
+    <meta name="yandex-verification" content="5968dd5cb6ae3a15" />
+    <meta name="yandex-verification" content="5c2e9fbdfc0b602f" />
+    {noindex && <meta name="robots" content="noindex" />}
+    {canonical && <link rel="canonical" href={canonical} />}
+    {alternates.map(a => <link rel="alternate" hreflang={a.lang} href={a.href} />)}
+    {alternates[0] && <link rel="alternate" hreflang="x-default" href={alternates[0].href} />}
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#fdeef4" id="theme-color" />
+
+    <!-- Тема ставится до отрисовки, чтобы не мигала: сохранённый выбор, иначе тема системы -->
+    <script is:inline>
+      (function () {
+        var t = null;
+        try { t = localStorage.getItem('fl-site-theme'); } catch (e) {}
+        if (t !== 'sakura' && t !== 'midnight') t = window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? 'midnight' : 'sakura';
+        var r = document.documentElement;
+        r.dataset.theme = t;
+        r.style.colorScheme = t === 'midnight' ? 'dark' : 'light';
+        document.getElementById('theme-color').setAttribute('content', t === 'midnight' ? '#0b0e1f' : '#fdeef4');
+      })();
+    </script>
+
+    <link rel="preload" href={asset(english ? 'fonts/nunito-latin.woff2' : 'fonts/nunito-cyrillic.woff2')} as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href={asset(english ? 'fonts/comfortaa-latin.woff2' : 'fonts/comfortaa-cyrillic.woff2')} as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href={asset('fonts/fonts.css')} />
+
+    <link rel="icon" href={asset('favicon.ico')} sizes="32x32" />
+    <link rel="icon" href={asset('icon-192.png')} type="image/png" sizes="192x192" />
+    <link rel="apple-touch-icon" href={asset('apple-touch-icon.png')} />
+    <link rel="manifest" href={asset('site.webmanifest')} />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="ru_RU" />
+    <meta property="og:site_name" content={site.name} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    {canonical && <meta property="og:url" content={canonical} />}
+    <meta property="og:image" content={abs('og.png')} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Femboy Launcher: главный экран лаунчера и котик" />
+    <meta name="twitter:card" content="summary_large_image" />
+  </head>
+  <body>
+    <a class="skip" href="#main">К содержимому</a>
+    <slot />
+  </body>
+</html>

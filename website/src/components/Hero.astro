@@ -1,0 +1,80 @@
+---
+import { Image } from 'astro:assets';
+import sakura from '../assets/screenshots/03-instances-sakura.png';
+import midnight from '../assets/screenshots/04-instances-midnight.png';
+import Icon from './Icon.astro';
+import { catSvg } from '../lib/cat.js';
+import { sceneSvg } from '../lib/scenes.js';
+
+interface Props {
+  version: string | null;
+}
+const { version } = Astro.props;
+const sizes = '(max-width: 900px) calc(100vw - 32px), 640px';
+// Лепестки: немного, только CSS, не ловят нажатия; при «меньше движения» не показываются
+const petals = Array.from({ length: 9 }, (_, i) => ({
+  x: `${(i * 11.3 + 4) % 100}%`,
+  s: `${10 + ((i * 7) % 9)}px`,
+  d: `${14 + ((i * 5) % 9)}s`,
+  delay: `-${(i * 3.7) % 16}s`,
+  drift: `${i % 2 ? '' : '-'}${40 + ((i * 13) % 60)}px`,
+}));
+---
+
+<section class="hero" id="top" aria-labelledby="hero-title">
+  <div class="petals" aria-hidden="true">
+    {petals.map((p) => <span class="petal" style={`--x:${p.x};--s:${p.s};--d:${p.d};--delay:${p.delay};--drift:${p.drift}`} />)}
+  </div>
+  <div class="wrap hero-grid">
+    <div class="hero-copy">
+      <h1 id="hero-title">
+        <span class="wordmark" translate="no">Femboy Launcher</span>
+        <span class="tagline">Уютный уголок для твоего Minecraft</span>
+      </h1>
+      <p class="hero-lead">
+        Бесплатный лаунчер Minecraft Java Edition для Windows с котиком: сборки с модами за пару щелчков, Fabric, Forge и другие загрузчики, моды с Modrinth,
+        помощь при вылетах и вход через Microsoft, Ely.by или просто по нику.
+      </p>
+      <div class="hero-cta">
+        <a class="btn btn-primary btn-lg" href="#download"><Icon name="download" />Скачать для Windows</a>
+        <a class="btn btn-soft btn-lg" href="#overview"><Icon name="play" />Смотреть обзор</a>
+      </div>
+      <ul class="hero-meta" aria-label="Коротко">
+        {version && <li>Версия {version}</li>}
+        <li>Windows 10 и 11</li>
+        <li>Русский и английский</li>
+      </ul>
+    </div>
+
+    <div class="hero-shot">
+      <div class="peek" set:html={catSvg()} />
+      <div class="frame">
+        <Image
+          class="theme-img-sakura"
+          src={sakura}
+          widths={[480, 760, 1100, 1400]}
+          sizes={sizes}
+          alt="Главный экран Femboy Launcher в теме «Сакура»: сборка «Уютное выживание», кнопка «Играть» и список сборок"
+          loading="eager"
+          fetchpriority="high"
+        />
+        <Image
+          class="theme-img-midnight"
+          src={midnight}
+          widths={[480, 760, 1100, 1400]}
+          sizes={sizes}
+          alt="Главный экран Femboy Launcher в теме «Полночь»: сборка «Уютное выживание», кнопка «Играть» и список сборок"
+          loading="lazy"
+        />
+      </div>
+      <div class="paws" aria-hidden="true">
+        <svg viewBox="0 0 40 30"><path d="M4 28 C2 12 10 3 20 3 C30 3 38 12 36 28" fill="#fff" stroke="#231a29" stroke-width="3" stroke-linecap="round"/><path d="M16 16 v8 M24 16 v8" stroke="#231a29" stroke-width="2.6" stroke-linecap="round"/></svg>
+        <svg viewBox="0 0 40 30"><path d="M4 28 C2 12 10 3 20 3 C30 3 38 12 36 28" fill="#fff" stroke="#231a29" stroke-width="3" stroke-linecap="round"/><path d="M16 16 v8 M24 16 v8" stroke="#231a29" stroke-width="2.6" stroke-linecap="round"/></svg>
+      </div>
+    </div>
+  </div>
+  <div class="hero-land" aria-hidden="true">
+    <div class="scene scene-sakura" set:html={sceneSvg('sakura', { id: 'hs', width: 1800, sun: false })} />
+    <div class="scene scene-midnight" set:html={sceneSvg('midnight', { id: 'hm', width: 1800, sun: false })} />
+  </div>
+</section>

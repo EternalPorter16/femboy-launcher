@@ -1,0 +1,41 @@
+---
+import { Image } from 'astro:assets';
+import sakura from '../assets/screenshots/03-instances-sakura.png';
+import midnight from '../assets/screenshots/04-instances-midnight.png';
+const sizes = '(max-width: 900px) calc(100vw - 32px), 760px';
+---
+
+<section class="section" id="themes" aria-labelledby="themes-title">
+  <div class="wrap themes-grid">
+    <div class="themes-copy">
+      <h2 id="themes-title">Днём «Сакура», ночью «Полночь»</h2>
+      <p>
+        В лаунчере четыре темы: светлая, «Сакура» с падающими лепестками, тёмная и «Полночь» со звёздами. Цвет акцента тоже можно выбрать, а
+        тему — оставить как в Windows.
+      </p>
+      <p>Потяни ползунок на скриншоте, чтобы сравнить. Или примерь тему прямо на этом сайте:</p>
+      <div class="theme-pick" role="group" aria-label="Тема сайта">
+        <button class="btn btn-soft" type="button" data-set-theme="sakura" aria-pressed="false"><span class="swatch swatch-sakura"></span>Сакура</button>
+        <button class="btn btn-soft" type="button" data-set-theme="midnight" aria-pressed="false"><span class="swatch swatch-midnight"></span>Полночь</button>
+      </div>
+    </div>
+
+    <div class="compare" data-compare>
+      <div class="compare-view frame">
+        <div class="under">
+          <Image src={midnight} widths={[480, 760, 1100, 1500]} sizes={sizes} alt="Тема «Полночь»: тот же главный экран в тёмно-синих тонах со звёздами и луной" loading="lazy" />
+        </div>
+        <div class="over">
+          <Image src={sakura} widths={[480, 760, 1100, 1500]} sizes={sizes} alt="Тема «Сакура»: главный экран в розовых тонах с деревом сакуры" loading="lazy" />
+        </div>
+        <span class="compare-line" aria-hidden="true"></span>
+        <label class="sr-only" for="compare-range">Граница между «Сакурой» и «Полночью»</label>
+        <input id="compare-range" type="range" min="0" max="100" value="50" step="1" aria-valuetext="Половина на половину" />
+      </div>
+      <div class="compare-labels" aria-hidden="true">
+        <span><span class="swatch swatch-sakura"></span>Сакура</span>
+        <span>Полночь<span class="swatch swatch-midnight"></span></span>
+      </div>
+    </div>
+  </div>
+</section>

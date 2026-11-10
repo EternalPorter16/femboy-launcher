@@ -1,0 +1,163 @@
+---
+// Раздел «Скачать». Все адреса и сведения о выпуске приходят из src/config/downloads.json через src/lib/downloads.js:
+// здесь нет ни одного зашитого адреса файла.
+import config from '../config/downloads.json';
+import { resolveDownloads } from '../lib/downloads.js';
+import Icon from './Icon.astro';
+
+const d = resolveDownloads(config);
+for (const w of d.warnings) console.warn(`[downloads.json] ${w}`);
+
+const details: Record<string, { sub: string; points: string[]; recommended?: boolean }> = {
+  setup: {
+    sub: 'Обычная установка с ярлыками. Подходит почти всем.',
+    recommended: true,
+    points: [
+      'Можно выбрать папку, ярлыки на рабочем столе и в «Пуске»',
+      'Обновляется сам: проверяет при запуске и раз в 2 часа, качает в фоне и ставит по кнопке или при закрытии',
+      'Двойной щелчок по файлу .mrpack открывает модпак в лаунчере',
+      'Удаляется через «Приложения» Windows, сборки, миры и аккаунты остаются',
+    ],
+  },
+  portable: {
+    sub: 'Один файл без установки. Удобно на флешке или если нельзя ставить программы.',
+    points: [
+      'Сборки, миры, Java и настройки лежат в папке data рядом с файлом, всё можно унести целиком',
+      'Сам не обновляется: лаунчер сообщит о новой версии, а скачать её нужно отсюда же',
+      'Чтобы обновиться, положи новый файл в ту же папку, рядом с data, а старый удали',
+    ],
+  },
+};
+const folder = d.mode !== 'direct' && d.storage.folderUrl;
+const yandex = config.storage.provider === 'yandex';
+---
+
+<section class="section download" id="download" aria-labelledby="download-title">
+  <div class="wrap">
+    <div class="dl-panel">
+      <div class="dl-head">
+        <h2 id="download-title">Скачать для Windows</h2>
+        <ul class="dl-facts" aria-label="О выпуске">
+          {d.version && <li>Версия {d.version}</li>}
+          {d.date && <li>Вышла <time datetime={d.date.iso}>{d.date.label}</time></li>}
+          <li>Windows 10 и 11, 64‑бит</li>
+        </ul>
+      </div>
+
+      <div class="dl-options">
+        {
+          d.options.map((o) => {
+            const info = details[o.id];
+            return (
+              <article class={`dl-option${info.recommended ? ' recommended' : ''}`} aria-labelledby={`dl-${o.id}`}>
+                <header>
+                  <h3 id={`dl-${o.id}`}>
+                    {o.title}
+                    {info.recommended && <span class="badge">Советуем</span>}
+                  </h3>
+                  <p class="sub">{info.sub}</p>
+                </header>
+                <ul class="ticks">
+                  {info.points.map((p) => (
+                    <li>{p}</li>
+                  ))}
+                </ul>
+                <div class="dl-action">
+                  {o.href && o.direct && (
+                    <a class="btn btn-primary btn-lg" href={o.href} download={o.fileName ?? true} data-dl={o.id} rel="noreferrer" referrerpolicy="no-referrer">
+                      <Icon name="download" />
+                      {o.action}
+                      {o.size && <span class="sr-only">, {o.size}</span>}
+                    </a>
+                  )}
+                  {o.direct && d.storage.folderUrl && (
+                    <a class="btn btn-soft" href={d.storage.folderUrl} target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer" aria-describedby={`dl-${o.id}-file`}>
+                      <Icon name="folder" />
+                      Запасной вариант: Яндекс.Диск
+                      <span class="sr-only"> (откроется в новой вкладке)</span>
+                    </a>
+                  )}
+                  {o.href && !o.direct && yandex && o.fileName && (
+                    <>
+                      <button class="btn btn-primary btn-lg" type="button" data-yandex-download data-folder-url={d.storage.folderUrl} data-file-name={o.fileName} aria-describedby={`dl-${o.id}-status`}>
+                        <Icon name="download" />
+                        <span data-download-label>{o.action}</span>
+                      </button>
+                      <p class="note" id={`dl-${o.id}-status`} role="status" aria-live="polite" aria-atomic="true"></p>
+                      <a class="btn btn-soft" href={o.href} target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer" aria-describedby={`dl-${o.id}-file`}>
+                        <Icon name="folder" />
+                        Открыть файлы на Яндекс.Диске
+                        <span class="sr-only"> (откроется в новой вкладке)</span>
+                      </a>
+                      <noscript><p class="note">Для прямого скачивания включи JavaScript или открой файлы на Яндекс.Диске кнопкой выше.</p></noscript>
+                    </>
+                  )}
+                  {o.href && !o.direct && (!yandex || !o.fileName) && (
+                    <a class="btn btn-primary btn-lg" href={o.href} target="_blank" rel="noopener" data-dl={o.id} aria-describedby={`dl-${o.id}-file`}>
+                      <Icon name="folder" />
+                      Открыть файлы {d.storage.where}
+                      <span class="sr-only"> (откроется в новой вкладке)</span>
+                    </a>
+                  )}
+                  {!o.href && <p class="note">Ссылка на этот файл появится здесь, как только будет готова.</p>}
+                  {o.fileName && (
+                    <p class="file-name" id={`dl-${o.id}-file`}>
+                      {o.direct || yandex ? 'Файл' : 'В папке выбери файл'} <code>{o.fileName}</code>
+                      {o.size && <> ({o.size})</>}
+                    </p>
+                  )}
+                  {o.sha256 && (
+                    <details class="checksum">
+                      <summary>Контрольная сумма SHA&#8209;256</summary>
+                      <div class="sum">
+                        <code id={`sha-${o.id}`}>{o.sha256}</code>
+                        <button class="btn btn-soft copy-btn" type="button" data-copy={`sha-${o.id}`}>
+                          <Icon name="copy" />
+                          <span>Скопировать</span>
+                        </button>
+                        <p>
+                          Сверить можно в PowerShell: <code>Get-FileHash .\{o.fileName ?? 'файл.exe'}</code> покажет ту же строку заглавными буквами.
+                        </p>
+                      </div>
+                    </details>
+                  )}
+                </div>
+              </article>
+            );
+          })
+        }
+      </div>
+
+      <div class="dl-foot">
+        <div class="dl-notes">
+        {
+          folder && (
+            <p class="note">
+              {yandex
+                ? 'Кнопка получает свежую ссылку на выбранный файл с Яндекс.Диска и передаёт её браузеру для скачивания. Если сервис недоступен, воспользуйся запасной ссылкой на папку.'
+                : `Установщики лежат в публичной папке ${d.storage.where}: открой её и выбери файл с нужным именем.`}
+            </p>
+          )
+        }
+        <p class="note">
+          Windows показывает предупреждение или файл не открывается? <a href="#help">Посмотри помощь с первым запуском</a>.
+        </p>
+        </div>
+        {
+          d.highlights.length > 0 && d.version && (
+            <div class="whatsnew">
+              <h3>Что нового в {d.version}</h3>
+              <ul>
+                {d.highlights.map((h) => (
+                  <li>{h}</li>
+                ))}
+              </ul>
+              <a class="release-history-link" href={`${import.meta.env.BASE_URL.replace(/\/?$/, '/')}releases/`}>Все изменения и прошлые версии <span aria-hidden="true">→</span></a>
+            </div>
+          )
+        }
+      </div>
+    </div>
+  </div>
+</section>
+

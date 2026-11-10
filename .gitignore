@@ -1,0 +1,36 @@
+node_modules/
+dist/
+dist-*/
+installer.log
+
+# Секреты и локальные ключи
+.env
+.env.*
+*.pem
+*.key
+RECOVERY-KEY*
+.firebase/
+.claude/
+*.local.json
+
+# Резервные копии, результаты аудита и сборки
+backups/
+docs/audit-2026-11-09/
+website/dist/
+website/.astro/
+website/video/out/
+website/video/node_modules/
+
+# Внутренние рабочие заметки (пути, тикеты, биллинг) — не для публичного репозитория
+CLAUDE.md
+AGENTS.md
+CURRENT_STATE.md
+HANDOFF.md
+DEFERRED_IDEAS.md
+website/CLAUDE.md
+website/PROJECT_STATE.md
+website/HANDOFF*.md
+docs/*
+!docs/logo.png
+!docs/installer-preview.png
+!docs/screenshots/

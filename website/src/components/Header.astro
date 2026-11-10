@@ -1,0 +1,42 @@
+---
+import { Image } from 'astro:assets';
+import logo from '../assets/logo.png';
+import Icon from './Icon.astro';
+import LanguageSwitch from './LanguageSwitch.astro';
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+const onHome = Astro.url.pathname.replace(/\/$/, '') === base.replace(/\/$/, '');
+const homeLink = (hash: string) => onHome ? hash : `${base}${hash}`;
+
+const links = [
+  { href: '#features', label: 'Возможности' },
+  { href: '#gallery', label: 'Интерфейс' },
+  { href: '#themes', label: 'Темы' },
+  { href: '#start', label: 'Как начать' },
+  { href: '#faq', label: 'Вопросы' },
+];
+---
+
+<header class="site-header">
+  <div class="wrap bar">
+    <a class="brand" href={homeLink('#top')} aria-label="Femboy Launcher, на главную">
+      <Image src={logo} alt="" width={36} height={36} densities={[1, 2]} loading="eager" />
+      <span class="brand-name" translate="no">Femboy<small>launcher</small></span>
+    </a>
+    <nav class="nav" id="site-nav" aria-label="Разделы страницы">
+      <ul>
+        {links.map((l) => <li><a href={homeLink(l.href)}>{l.label}</a></li>)}
+      </ul>
+    </nav>
+    <div class="header-actions">
+      <LanguageSwitch />
+      <button class="icon-btn theme-toggle" type="button" data-theme-toggle aria-label="Тёмная тема «Полночь»" title="Сменить тему">
+        <span class="moon"><Icon name="moon" /></span>
+        <span class="sun"><Icon name="sun" /></span>
+      </button>
+      <a class="btn btn-primary header-dl" href={homeLink('#download')}><Icon name="download" /><span class="lbl">Скачать<span class="long"> для Windows</span></span></a>
+      <button class="icon-btn menu-btn" type="button" aria-controls="site-nav" aria-expanded="false" aria-label="Меню разделов">
+        <Icon name="menu" />
+      </button>
+    </div>
+  </div>
+</header>

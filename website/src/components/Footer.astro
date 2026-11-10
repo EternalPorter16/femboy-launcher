@@ -1,0 +1,87 @@
+---
+import config from '../config/downloads.json';
+import { resolveDownloads } from '../lib/downloads.js';
+import { catSvg } from '../lib/cat.js';
+import site from '../config/site.json';
+import Icon from './Icon.astro';
+
+const d = resolveDownloads(config);
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+const onHome = Astro.url.pathname.replace(/\/$/, '') === base.replace(/\/$/, '');
+const homeLink = (hash: string) => onHome ? hash : `${base}${hash}`;
+const year = d.date ? d.date.iso.slice(0, 4) : null;
+const english = Astro.url.pathname.startsWith(base + 'en/');
+const shareUrl = Astro.site ? new URL(base + (english ? 'en/' : ''), Astro.site).href : null;
+const telegramShare = new URL('https://t.me/share/url');
+if (shareUrl) telegramShare.searchParams.set('url', shareUrl);
+telegramShare.searchParams.set('text', english ? 'Femboy Launcher — Minecraft launcher for Windows' : site.title);
+---
+
+<footer class="site-footer">
+  <div class="foot-cat" aria-hidden="true" set:html={catSvg('head')} />
+  <div class="wrap">
+    <div class="foot-brand">
+      <p class="brand-name foot-name" translate="no">Femboy<small>launcher</small></p>
+      <p>
+        Уютный Minecraft-лаунчер для Windows. Независимый проект: это не официальный продукт Minecraft, он не одобрен Mojang Studios
+        и Microsoft и не связан с ними.
+      </p>
+    </div>
+    <ul class="foot-links" aria-label="Ссылки">
+      <li><a href={homeLink('#download')}>Скачать</a></li>
+      <li><a href={homeLink('#features')}>Возможности</a></li>
+      <li><a href={homeLink('#gallery')}>Скриншоты</a></li>
+      <li><a href={homeLink('#overview')}>Видеообзор</a></li>
+      <li><a href={homeLink('#faq')}>Вопросы</a></li>
+      <li><a href={homeLink('#help')}>Помощь с запуском</a></li>
+      <li><a href={`${base}releases/`}>История версий</a></li>
+      {
+        d.storage.folderUrl && (
+          <li>
+            <a href={d.storage.folderUrl} target="_blank" rel="noopener">
+              Файлы {d.storage.where}
+            </a>
+          </li>
+        )
+      }
+      <li><a href="https://modrinth.com" target="_blank" rel="noopener">Modrinth</a></li>
+    </ul>
+    <div class="foot-contacts" aria-labelledby="contacts-title">
+      <h2 id="contacts-title">Связаться с разработчиком</h2>
+      <p class="contact-intro">Другие проекты и немного обо мне — на личном сайте. С вопросами о лаунчере и отзывами пиши в Telegram или Discord.</p>
+      <ul>
+        <li><a class="contact-identity author-site" href={site.contacts.website} target="_blank" rel="noopener"><span class="contact-icon"><Icon name="worlds" /></span><span>Сайт автора — Bart Awesome</span></a></li>
+        <li><a class="contact-identity" href={`https://t.me/${site.contacts.telegram}`} target="_blank" rel="noopener"><span class="contact-icon"><Icon name="telegram" /></span><span>Telegram: @{site.contacts.telegram}</span></a></li>
+        <li>
+          <span class="contact-identity"><span class="contact-icon"><Icon name="discord" /></span><span>Discord: <code id="discord-contact" translate="no">{site.contacts.discord}</code></span></span>
+          <button class="btn btn-soft" type="button" data-copy="discord-contact" aria-label="Скопировать имя в Discord">
+            <Icon name="copy" /><span aria-live="polite">Скопировать</span>
+          </button>
+        </li>
+      </ul>
+      <div class="feedback-invite" id="feedback" aria-labelledby="feedback-title">
+        <div>
+          <h3 id="feedback-title">Уже попробовал лаунчер?</h3>
+          <p>Расскажи, что понравилось и чего не хватает. Твои впечатления помогут сделать лаунчер удобнее.</p>
+        </div>
+        <a class="btn btn-soft" href={`https://t.me/${site.contacts.telegram}`} target="_blank" rel="noopener"><Icon name="calm" />Оставить отзыв</a>
+      </div>
+    </div>
+    {shareUrl && (
+      <div class="foot-share" aria-labelledby="share-title">
+        <div>
+          <h2 id="share-title">Поделиться лаунчером</h2>
+          <p>Отправь ссылку другу — пусть тоже обустроит свой Minecraft.</p>
+          <a class="share-address" id="share-site-url" href={shareUrl}>{shareUrl}</a>
+        </div>
+        <div class="share-actions">
+          <button class="btn btn-soft" type="button" data-copy="share-site-url" aria-label="Скопировать ссылку на сайт"><Icon name="copy" /><span aria-live="polite">Скопировать</span></button>
+          <a class="btn btn-soft" href={telegramShare.href} target="_blank" rel="noopener noreferrer"><Icon name="telegram" />Отправить в Telegram</a>
+        </div>
+      </div>
+    )}
+    <p class="foot-small">
+      {year && <>Femboy Launcher, {year}. </>}Шрифты Comfortaa, Nunito и Fredoka — по <a href={`${base}fonts/LICENSE-fonts.txt`}>лицензии SIL Open Font License 1.1</a>.
+    </p>
+  </div>
+</footer>
