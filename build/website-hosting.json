@@ -2,10 +2,9 @@
   "activeProvider": "spaceweb",
   "spaceweb": {
     "status": "production",
-    "host": "vh403.sweb.ru",
     "protocol": "explicit-ftps",
     "port": 21,
     "directory": "/public_html",
-    "previewUrl": "http://bartawesom.temp.swtest.ru"
+    "localConfig": "build/website-hosting.local.json"
   }
 }

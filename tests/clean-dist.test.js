@@ -206,7 +206,7 @@ test('настоящий проект: скрипт на месте, release.bat
   const cleanAt = bat.indexOf('build\\clean-dist.js');
   const s3 = bat.indexOf('publish-s3.ps1 -Out');
   assert.ok(s3 >= 0 && s3 < publish, 'основной S3 публикуется перед резервным Диском');
-  assert.ok(bat.indexOf('publish-s3.ps1 -Check') < bat.indexOf('call npx electron-builder'), 'доступ S3 проверяется до сборки');
+  assert.ok(bat.indexOf('publish-s3.ps1 -Check') < bat.indexOf('node build\\release-build.js'), 'доступ S3 проверяется до сборки');
   assert.ok(publish >= 0 && cleanAt > publish, 'порядок: выкладка → чистка');
   assert.match(bat.slice(publish, bat.indexOf('\n', publish)), /\|\| \(pause & exit \/b 1\)/, 'неудачная выкладка выходит из скрипта до чистки');
   const line = bat.slice(cleanAt, bat.indexOf('\n', cleanAt));
@@ -218,6 +218,6 @@ test('настоящий проект: скрипт на месте, release.bat
   assert.match(bat.slice(websiteAt, bat.indexOf('\n', websiteAt)), /--build && call build\\deploy-website\.bat \|\| echo WARNING:/, 'ошибка сайта явно сообщается, но не отменяет выпуск лаунчера');
   assert.ok(bat.indexOf('\nver >nul', websiteAt) > websiteAt, 'после дополнительного шага код выхода выпуска сбрасывается');
   assert.ok(tail.indexOf('\nver >nul') > 0 && tail.indexOf('\nver >nul') < tail.lastIndexOf('pause'), 'после чистки код выхода сбрасывается: выпуск удался, и неудачная чистка не должна оставить ошибку');
-  assert.equal(bat.match(/--config\.directories\.output=(\S+)/)[1], 'dist-release');
+  assert.match(bat, /node build\\release-build\.js dist-release \|\| \(pause & exit \/b 1\)/);
   assert.ok(!bat.includes('\r') && ASCII.test(bat), 'release.bat: только ASCII и переводы строк LF');
 });

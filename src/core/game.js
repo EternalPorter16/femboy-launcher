@@ -20,6 +20,7 @@ const friendlist = require('./friendlist');
 const playlog = require('./playlog');
 const snapshots = require('./snapshots');
 const bisect = require('./bisect');
+const livegames = require('./livegames');
 
 // Короче этого сессия «удачным запуском» не считается: за пару минут могли только дойти до меню
 const GOOD_MIN_MS = 3 * 60 * 1000;
@@ -33,7 +34,7 @@ const TASKS = {
   'classes-maven-custom': 'библиотеки загрузчика',
 };
 
-const running = new Map(); // id сборки → { proc, startedAt, killed, modsAtLaunch }
+const running = new Map(); // id сборки → { proc, startedAt, killed, modsAtLaunch, adopted? }; adopted — игра осталась от прошлого запуска лаунчера
 const launching = new Set();
 
 const mb = (n) => (n / 1024 / 1024).toFixed(1);
@@ -119,6 +120,7 @@ function raceCancel(promise, onLate) {
 }
 
 async function launch(id, ui, { server, world, whitelist } = {}) {
+  if (running.get(id)?.adopted) throw new Error('Эта сборка уже запущена: игра осталась от прошлого запуска лаунчера. Закрой её (кнопка «Закрыть игру») и запусти снова');
   if (running.has(id) || launching.has(id)) throw new Error('Эта сборка уже запущена');
   launching.add(id);
   try {
@@ -283,6 +285,9 @@ async function doLaunch(id, ui, { server, world, whitelist } = {}) {
   client.on('close', (code) => {
     const run = running.get(id);
     running.delete(id);
+    try {
+      livegames.untrack(id);
+    } catch {}
     if (!run) return;
     try {
       const cur = instances.get(id);
@@ -357,9 +362,97 @@ async function doLaunch(id, ui, { server, world, whitelist } = {}) {
     });
   }
 
-  running.set(id, { proc, startedAt: Date.now(), killed: false, modsAtLaunch });
+  const startedAt = Date.now();
+  running.set(id, { proc, startedAt, killed: false, modsAtLaunch });
+  // Запись о запущенной игре: если лаунчер завершат принудительно, при следующем старте игру узнают (см. recover)
+  livegames.track(id, { pid: proc.pid, javaPath, gameDir: gameDirectory, startedAt }).catch(() => {});
   instances.touch(id, { lastPlayed: Date.now() });
   ui.started();
+}
+
+// Игра, пережившая принудительное завершение лаунчера: следим за её процессом и после выхода делаем обычную работу после игры.
+// Код выхода неизвестен (null): разбор вылета невозможен, моды «последним удачным запуском» не отмечаем.
+function adopt(id, rec, ui, pollMs) {
+  if (running.has(id)) return;
+  let timer = null;
+  let finished = false;
+  // credit=false: игра ушла в неизвестное время (подмена PID), время игры не начисляем
+  const finish = (credit) => {
+    if (finished) return;
+    finished = true;
+    clearInterval(timer);
+    running.delete(id);
+    try {
+      livegames.untrack(id);
+    } catch {}
+    if (credit) {
+      try {
+        const cur = instances.get(id);
+        instances.touch(id, { playtime: (cur.playtime || 0) + (Date.now() - rec.startedAt) });
+      } catch {}
+      try {
+        playlog.add(id, rec.startedAt, Date.now());
+      } catch {}
+    }
+    ui.closed?.(id, null, rec);
+  };
+  // Перед завершением процесса сверяем, что это всё ещё игра (время запуска и папка): PID мог достаться другой программе
+  const stop = async () => {
+    const v = await livegames.verify(rec);
+    if (v === true) {
+      try {
+        process.kill(rec.pid);
+      } catch {}
+    } else if (v === false) finish(false); // это уже не наш процесс: не трогаем его, запись снимаем
+    else ui.unverified?.([id]); // ОС не ответила: чужой процесс не рискуем завершить
+  };
+  running.set(id, { proc: { pid: rec.pid, kill() { stop().catch(() => {}); } }, startedAt: rec.startedAt, killed: false, modsAtLaunch: null, adopted: true });
+  try {
+    ui.adopted?.(id, rec);
+  } catch {}
+  let polls = 0;
+  let busy = false;
+  timer = setInterval(async () => {
+    if (busy || finished) return;
+    busy = true;
+    try {
+      let alive;
+      try {
+        process.kill(rec.pid, 0);
+        alive = true;
+      } catch (e) {
+        alive = e.code === 'EPERM';
+      }
+      // Раз в десять опросов сверяем и личность процесса: PID после выхода игры мог достаться другой программе
+      let credit = true;
+      if (alive && ++polls % 10 === 0) {
+        alive = (await livegames.verify(rec)) !== false;
+        credit = false;
+      }
+      if (!alive) finish(credit);
+    } finally {
+      busy = false;
+    }
+  }, pollMs);
+  timer.unref?.();
+}
+
+// При старте лаунчера: игры из записи running-games.json. Живые подхватываем, мёртвые (закрылись, пока лаунчера не было) убираем:
+// время их игры точно не известно, поэтому его не начисляем, а ui.gone даёт сделать работу после игры (копия миров)
+async function recover(ui = {}, { pollMs = 3000 } = {}) {
+  const { alive, gone, unknown } = await livegames.scan();
+  if (unknown.length) {
+    try {
+      ui.unverified?.(unknown.map((u) => u.id));
+    } catch {}
+  }
+  for (const g of gone) {
+    try {
+      ui.gone?.(g.id, g.rec);
+    } catch {}
+  }
+  for (const a of alive) adopt(a.id, a.rec, ui, pollMs);
+  return { adopted: alive.map((a) => a.id), gone: gone.map((g) => g.id), unknown: unknown.map((u) => u.id) };
 }
 
 function kill(id) {
@@ -372,6 +465,7 @@ function kill(id) {
 module.exports = {
   launch,
   kill,
+  recover,
   isRunning: (id) => (id ? running.has(id) : running.size > 0),
   runningIds: () => [...running.keys()],
   quickPlay,

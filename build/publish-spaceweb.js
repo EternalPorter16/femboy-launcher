@@ -3,15 +3,31 @@ const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const { Readable, Writable } = require('node:stream');
-const ROOT = '/public_html';
-const LOCK = '/.fl-site-deploy-lock';
-const HOST = 'vh403.sweb.ru';
-const PREVIEW = 'http://bartawesom.temp.swtest.ru';
+const recovery = require('./spaceweb-recovery');
+const { ROOT, LOCK } = recovery;
+// Адрес FTP-сервера, технический адрес сайта и логин — только в локальном build/website-hosting.local.json (вне git).
+// Безопасный пример без рабочих значений: build/website-hosting.local.example.json
+const LOCAL_CONFIG = path.join(__dirname, 'website-hosting.local.json');
+const LOCAL_MISSING = 'Local hosting configuration is missing: copy build/website-hosting.local.example.json to build/website-hosting.local.json and fill in the server details (the file stays out of git)';
+function hostingConfig(file = LOCAL_CONFIG) {
+  let c;
+  try {
+    c = JSON.parse(fs.readFileSync(file, 'utf8'));
+  } catch (e) {
+    throw new Error(e.code === 'ENOENT' ? LOCAL_MISSING : 'Local hosting configuration build/website-hosting.local.json is not valid JSON');
+  }
+  const host = c && typeof c.host === 'string' ? c.host.trim() : '';
+  const preview = c && typeof c.previewUrl === 'string' ? c.previewUrl.trim().replace(/\/+$/, '') : '';
+  const placeholder = (s) => /example|\.invalid$|^<|>$/i.test(s);
+  if (!/^[A-Za-z0-9.-]{1,253}$/.test(host) || placeholder(host)) throw new Error('Local hosting configuration build/website-hosting.local.json: fill in a real "host"');
+  if (!/^https?:\/\/[A-Za-z0-9.-]{1,253}$/.test(preview) || placeholder(preview)) throw new Error('Local hosting configuration build/website-hosting.local.json: fill in a real "previewUrl"');
+  return { host, preview };
+}
 const ROUTES = ['', 'en/', 'releases/', 'en/releases/', 'guides/setup-or-portable/', 'en/guides/setup-or-portable/', 'guides/install-modrinth-modpack/', 'en/guides/install-modrinth-modpack/'];
 const digest = b => crypto.createHash('sha256').update(b).digest('hex');
 const allowed = new Set(['.html','.css','.js','.json','.png','.ico','.webp','.woff2','.txt','.vtt','.mp4','.jpg','.xml','.webmanifest','.svg','.woff','.jpeg','.avif','.gif']);
 
-function plan(project, { preview = true, out = 'website/dist' } = {}) {
+function plan(project, { preview = true, out = 'website/dist', previewHost } = {}) {
   const folder = path.resolve(project, out);
   const version = JSON.parse(fs.readFileSync(path.join(project, 'website/src/config/downloads.json'), 'utf8')).release.version;
   if (!/^\d+\.\d+\.\d+(?:-[\w.-]+)?$/.test(version)) throw new Error('Invalid published website version');
@@ -22,7 +38,7 @@ function plan(project, { preview = true, out = 'website/dist' } = {}) {
       const name = prefix + entry.name;
       const full = path.join(dir, entry.name);
       const stat = fs.lstatSync(full);
-      if (stat.isSymbolicLink() || /[\x00-\x1f\\]/.test(name)) throw new Error('Unsafe website entry');
+      if (stat.isSymbolicLink() || entry.name.startsWith('.') || /[\x00-\x1f\\]/.test(name)) throw new Error('Unsafe website entry');
       if (stat.isDirectory()) { walk(full, name + '/'); continue; }
       if (!stat.isFile() || !allowed.has(path.extname(name).toLowerCase()) || /(?:^|\/)(?:package(?:-lock)?\.json|firebase\.json|credentials[^/]*|[^/]*-key\.xml)$/i.test(name) || entry.name.startsWith('.')) throw new Error('Non-public file in website output');
       bytes += stat.size;
@@ -38,6 +54,7 @@ function plan(project, { preview = true, out = 'website/dist' } = {}) {
     }
   }
   walk(folder);
+  for (const required of ['404.html', 'robots.txt', 'sitemap.xml']) if (!files.some(f => f.name === required && f.body.length)) throw new Error('Required website file is missing: ' + required);
   for (const route of ROUTES) {
     const file = files.find(f => f.name === route + 'index.html');
     if (!file || !file.body.includes('Femboy Launcher')) throw new Error('Required website page is missing');
@@ -47,9 +64,38 @@ function plan(project, { preview = true, out = 'website/dist' } = {}) {
   }
   const home = files.find(f => f.name === 'index.html').body.toString('utf8');
   if (!home.includes(`FemboyLauncher-Setup-${version}.exe`) || !home.includes(`FemboyLauncher-Portable-${version}.exe`) || !home.includes('https://downloads.femboylauncher.ru/')) throw new Error('Website download version does not match published metadata');
-  const headers = preview ? '    Header always set X-Robots-Tag "noindex, nofollow"\n' : '    SetEnvIfNoCase Host "^bartawesom[.]temp[.]swtest[.]ru(:[0-9]+)?$" fl_preview=1\n    Header always set X-Robots-Tag "noindex, nofollow" env=fl_preview\n';
-  const redirects = preview ? '' : 'RewriteEngine On\nRewriteCond %{ENV:REDIRECT_STATUS} =404\nRewriteRule ^ - [L]\nRewriteCond %{REQUEST_URI} !^/\\.well-known/acme-challenge/ [NC]\nRewriteCond %{HTTP_HOST} ^www[.]femboylauncher[.]ru(?::[0-9]+)?$ [NC]\nRewriteRule ^ https://femboylauncher.ru%{REQUEST_URI} [R=301,L,NE]\nRewriteCond %{REQUEST_URI} !^/\\.well-known/acme-challenge/ [NC]\nRewriteCond %{HTTP_HOST} ^femboylauncher[.]ru(?::[0-9]+)?$ [NC]\nRewriteCond %{HTTP:HTTPS} !=on [NC]\nRewriteCond %{HTTPS} !=on [NC]\nRewriteCond %{HTTP:X-Forwarded-Proto} !^https$ [NC]\nRewriteRule ^ https://femboylauncher.ru%{REQUEST_URI} [R=301,L,NE]\n';
-  const htaccess = Buffer.from(redirects + 'DirectoryIndex index.html\nErrorDocument 404 /404.html\n<IfModule mod_headers.c>\n' + headers + '</IfModule>\n<IfModule mod_mime.c>\n    AddType text/vtt .vtt\n    AddType application/manifest+json .webmanifest\n</IfModule>\n');
+  // Технический адрес хостинга в боевой публикации получает noindex; сам адрес — из локальной конфигурации (previewHost)
+  if (!preview && !/^[A-Za-z0-9-]+(?:[.][A-Za-z0-9-]+)+$/.test(previewHost || '')) throw new Error('Local hosting configuration: the technical preview host is required for production rules');
+  const previewHostRe = preview ? '' : previewHost.split('.').join('[.]');
+  const headers = preview ? '    Header always set X-Robots-Tag "noindex, nofollow"\n' : '    SetEnvIfNoCase Host "^' + previewHostRe + '(:[0-9]+)?$" fl_preview=1\n    Header always set X-Robots-Tag "noindex, nofollow" env=fl_preview\n';
+  const redirects = preview ? 'RewriteEngine On\nRewriteRule ^\\.fl-site-deploy[.]json$ - [F,L]\n' : [
+    'RewriteEngine On',
+    'RewriteRule ^\\.fl-site-deploy[.]json$ - [F,L]',
+    'RewriteCond %{HTTPS} =on [NC,OR]',
+    'RewriteCond %{HTTP:HTTPS} =on [NC,OR]',
+    'RewriteCond %{HTTP:X-Forwarded-Proto} ^https$ [NC]',
+    'RewriteRule ^ - [E=fl_https:1]',
+    'RewriteCond %{ENV:REDIRECT_STATUS} ^(?:403|404)$',
+    'RewriteRule ^ - [L]',
+    'RewriteCond %{HTTP_HOST} ^(?:www[.])?femboylauncher[.]ru(?::[0-9]+)?$ [NC]',
+    'RewriteCond %{REQUEST_URI} !^/\\.well-known/acme-challenge/ [NC]',
+    'RewriteCond %{REQUEST_FILENAME} -d',
+    'RewriteCond %{REQUEST_URI} !/$',
+    'RewriteRule ^ https://femboylauncher.ru%{REQUEST_URI}/ [R=301,L,NE]',
+    'RewriteCond %{REQUEST_URI} !^/\\.well-known/acme-challenge/ [NC]',
+    'RewriteCond %{HTTP_HOST} ^www[.]femboylauncher[.]ru(?::[0-9]+)?$ [NC]',
+    'RewriteRule ^ https://femboylauncher.ru%{REQUEST_URI} [R=301,L,NE]',
+    'RewriteCond %{REQUEST_URI} !^/\\.well-known/acme-challenge/ [NC]',
+    'RewriteCond %{HTTP_HOST} ^femboylauncher[.]ru(?::[0-9]+)?$ [NC]',
+    'RewriteCond %{HTTP:HTTPS} !=on [NC]',
+    'RewriteCond %{HTTPS} !=on [NC]',
+    'RewriteCond %{HTTP:X-Forwarded-Proto} !^https$ [NC]',
+    'RewriteRule ^ https://femboylauncher.ru%{REQUEST_URI} [R=301,L,NE]', ''
+  ].join('\n');
+  const htaccess = Buffer.from(redirects + 'DirectoryIndex index.html\nAddDefaultCharset UTF-8\nErrorDocument 403 /404.html\nErrorDocument 404 /404.html\n<IfModule mod_headers.c>\n' + headers +
+    '    Header always set X-Content-Type-Options "nosniff"\n' +
+    (preview ? '' : '    Header always set Strict-Transport-Security "max-age=86400" env=fl_https\n') +
+    '    <FilesMatch "\\.html$">\n        Header always set Cache-Control "no-cache"\n    </FilesMatch>\n</IfModule>\n<IfModule mod_mime.c>\n    AddType text/vtt .vtt\n    AddType application/manifest+json .webmanifest\n</IfModule>\n');
   files.push({ name: '.htaccess', body: htaccess, sha256: digest(htaccess) });
   const id = new Date().toISOString().replace(/[-:.TZ]/g, '') + '-' + crypto.randomBytes(4).toString('hex');
   const marker = Buffer.from(JSON.stringify({ id, version, preview, files: files.length, created: new Date().toISOString() }) + '\n');
@@ -57,8 +103,9 @@ function plan(project, { preview = true, out = 'website/dist' } = {}) {
   return { id, version, preview, files };
 }
 
-function connection(credentials) {
+function connection(credentials, config = hostingConfig()) {
   const { Client } = require('basic-ftp');
+  const HOST = config.host;
   let c;
   async function ready() {
     if (!c || c.closed) {
@@ -88,65 +135,91 @@ function connection(credentials) {
       return Buffer.concat(chunks);
     },
     async move(from, to) { await (await ready()).rename(from, to); },
-    async exists(dir) { return (await (await ready()).list('/')).some(f => '/' + f.name === dir); },
+    async exists(file) {
+      const entry = (await (await ready()).list(path.posix.dirname(file))).find(f => f.name === path.posix.basename(file));
+      if (entry?.isSymbolicLink) throw new Error('SpaceWeb unsafe remote link; files preserved');
+      return !!entry;
+    },
+    async list(dir) { return (await (await ready()).list(dir)).map(f => ({ name: f.name })); },
+    async remove(file) { await (await ready()).remove(file); },
+    reconnect() { c?.close(); c = null; },
     close() { c?.close(); },
   };
   return remote;
 }
 
 async function rollback(remote, p, backup, stage) {
-  if (!(await remote.exists(backup))) throw new Error('Previous website backup not found');
-  if (await remote.exists(ROOT)) {
-    const marker = JSON.parse((await remote.get(ROOT + '/.fl-site-deploy.json', 8192)).toString());
-    if (marker.id !== p.id || await remote.exists(stage)) throw new Error('Website state changed; manual recovery required');
-    await remote.move(ROOT, stage);
-  }
-  await remote.move(backup, ROOT);
+  const o = await recovery.readOwner(remote);
+  if (o.id !== p.id || o.backup !== backup || o.stage !== stage) throw new Error('SpaceWeb lock ownership changed; files preserved');
+  return recovery.rollback(remote, o);
 }
 
 async function publish(p, remote, { log = () => {}, verify = async () => {} } = {}) {
   const stage = '/.fl-site-stage-' + p.id;
   const backup = '/.fl-site-backup-' + p.id;
-  let locked = false, oldMoved = false, moveAttempted = false, recoveryFailed = false;
+  let locked = false, moveAttempted = false, recoveryFailed = false, phase = 'preflight';
   const oldHash = await remote.preflight();
+  const marker = ROOT + '/.fl-site-deploy.json';
+  const oldMarkerHash = await remote.exists(marker) ? digest(await remote.get(marker, 8192)) : null;
+  const o = recovery.owner(p, oldHash, oldMarkerHash);
   try {
+    if (await remote.exists(LOCK)) throw new Error('SpaceWeb deployment lock exists; use --status before recovery');
+    if (await remote.exists(stage) || await remote.exists(backup)) throw new Error('SpaceWeb directory state changed; staging name is already in use');
+    phase = 'lock';
     await remote.mkdir(LOCK); locked = true;
+    await remote.put(LOCK + '/owner.json', recovery.sealed(o));
+    await recovery.guard(remote, o);
+    phase = 'staging';
     await remote.mkdir(stage);
     const dirs = new Set(p.files.map(f => path.posix.dirname(f.name)).filter(d => d !== '.'));
-    for (const dir of [...dirs].sort()) await remote.ensureDir(stage + '/' + dir);
+    for (const dir of [...dirs].sort()) await recovery.retry(remote, async () => { await recovery.guard(remote, o); await remote.ensureDir(stage + '/' + dir); });
     log(`SpaceWeb: uploading ${p.files.length} files to staging ${stage}`);
     for (let i = 0; i < p.files.length; i++) {
       const f = p.files[i];
-      await remote.put(stage + '/' + f.name, f.body);
+      await recovery.retry(remote, async () => { await recovery.guard(remote, o); await remote.put(stage + '/' + f.name, f.body); });
       if ((i + 1) % 25 === 0) log(`SpaceWeb: uploaded ${i + 1}/${p.files.length}`);
     }
+    phase = 'staged-check';
     log('SpaceWeb: verifying every staged file by SHA256');
-    for (const f of p.files) if (digest(await remote.get(stage + '/' + f.name, f.body.length + 1)) !== f.sha256) throw new Error('Staged website checksum mismatch');
+    for (const f of p.files) if (digest(await recovery.retry(remote, () => remote.get(stage + '/' + f.name, f.body.length + 1))) !== f.sha256) throw new Error('Staged website checksum mismatch');
     if (digest(await remote.get(ROOT + '/index.html', 2 * 1024 * 1024)) !== oldHash) throw new Error('Website changed during staging; deployment stopped');
-    moveAttempted = true;
-    await remote.move(ROOT, backup); oldMoved = true;
-    await remote.move(stage, ROOT);
+    phase = 'backup-switch'; moveAttempted = true;
+    await recovery.move(remote, ROOT, backup, o, recovery.oldAt);
+    phase = 'root-switch';
+    await recovery.move(remote, stage, ROOT, o, recovery.newAt);
+    phase = 'public-check';
     await verify(p);
+    phase = 'completion';
+    await recovery.guard(remote, o);
+    await remote.put(LOCK + '/complete.json', recovery.sealed({ id: o.id, owner: recovery.digest(o) }));
     log(`SpaceWeb ${p.version}: published and verified; previous website preserved as ${backup}`);
     return { backup, id: p.id, preview: p.preview };
   } catch (error) {
     if (moveAttempted) {
       try {
-        if (await remote.exists(backup)) { await rollback(remote, p, backup, stage); log('SpaceWeb: previous website restored'); }
-        else if (oldMoved) throw new Error('Previous directory state could not be confirmed');
-      } catch { recoveryFailed = true; throw new Error('SpaceWeb recovery requires attention; deployment lock and backup preserved'); }
+        await recovery.retry(remote, () => recovery.rollback(remote, o)); log('SpaceWeb: previous website restored');
+      } catch (rollbackError) {
+        recoveryFailed = true;
+        // Never include FTP replies or verification messages: they may contain credentials.
+        const code = e => /^[1-5][0-9]{2}$/.test(String(e?.code)) ? 'FTP_' + e.code : typeof e?.code === 'string' && /^(?:E[A-Z0-9_]{1,30}|ERR_[A-Z0-9_]{1,28})$/.test(e.code) ? e.code : 'unclassified';
+        const failure = new Error(`SpaceWeb recovery requires attention; deployment lock and backup preserved (phase=${phase}, operation=${code(error)}, rollback=${code(rollbackError)})`);
+        failure.cause = rollbackError;
+        failure.publishCause = error;
+        failure.phase = phase;
+        throw failure;
+      }
     }
     throw error;
   } finally {
     if (locked && !recoveryFailed) {
-      try { await remote.rmdir(LOCK); }
+      try { await recovery.release(remote, o); }
       catch { log('WARNING: website deployment lock remains; check before retrying'); }
     }
   }
 }
 
-async function verifyPublic(p) {
-  const origin = p.preview ? PREVIEW : 'https://femboylauncher.ru';
+async function verifyPublic(p, config) {
+  const origin = p.preview ? (config || hostingConfig()).preview : 'https://femboylauncher.ru';
   for (const route of ROUTES) {
     const response = await fetch(origin + '/' + route + '?deployment=' + p.id, { cache: 'no-store', signal: AbortSignal.timeout(20000) });
     const html = await response.text();
@@ -158,7 +231,11 @@ async function verifyPublic(p) {
 if (require.main === module) {
   (async () => {
     const args = process.argv.slice(2);
-    if (args.length !== 1 || !['--check','--preview','--production'].includes(args[0])) throw new Error('Use --check, --preview or --production');
+    const mode = args[0];
+    const recovering = mode === '--recover';
+    if (!(args.length === 1 && ['--check','--preview','--production','--status'].includes(mode)) && !(recovering && args.length === 3 && args[2] === '--owner-stopped')) throw new Error('Use --check, --preview, --production, --status or --recover ID --owner-stopped');
+    // Сначала локальная конфигурация сервера: без неё ничего не читаем из сети и не публикуем
+    const config = hostingConfig();
     const user = process.env.SW_FTP_USER, password = process.env.SW_FTP_PASSWORD;
     if (!user || !password) throw new Error('Run the local SpaceWeb access setup first');
     const project = path.join(__dirname, '..');
@@ -166,19 +243,19 @@ if (require.main === module) {
       const config = JSON.parse(fs.readFileSync(path.join(project, 'build/website-hosting.json'), 'utf8'));
       if (config.activeProvider !== 'spaceweb') throw new Error('Production SpaceWeb publication is not enabled; primary site is still Firebase');
     }
-    const p = args[0] === '--check' ? null : plan(project, { preview: args[0] === '--preview' });
-    const remote = connection({ user, password });
+    const p = ['--preview','--production'].includes(mode) ? plan(project, { preview: mode === '--preview', previewHost: new URL(config.preview).hostname }) : null;
+    const remote = connection({ user, password }, config);
     try {
+      if (mode === '--status') return console.log(JSON.stringify(await recovery.status(remote), null, 2));
+      if (recovering) return console.log(JSON.stringify(await recovery.recover(remote, { expectedId: args[1], ownerStopped: true }), null, 2));
       if (!p) { await remote.preflight(); return console.log('SpaceWeb protected access ready'); }
-      await publish(p, remote, { log: console.log, verify: verifyPublic });
+      await publish(p, remote, { log: console.log, verify: (x) => verifyPublic(x, config) });
     } finally { remote.close(); }
   })().catch(e => {
     // Server replies may contain account details: only print application errors.
-    const safe = /^(Use |Run |Production SpaceWeb|Invalid published|Unsafe website|Non-public|Website |Required website|English page|Production page|Staged website|Public website|SpaceWeb recovery|Expected public_html|Refusing to replace)/.test(e.message);
+    const safe = /^(Use |Run |Local hosting configuration|Production SpaceWeb|Invalid published|Unsafe website|Non-public|Website |Required website|English page|Production page|Staged website|Public website|SpaceWeb (?:recovery|lock|deployment|directory|previous|completed|unsafe|renamed)|Expected public_html|Refusing to replace)/.test(e.message);
     console.error(safe ? e.message : `SpaceWeb deployment stopped (${e.code || 'connection or filesystem error'}); credentials were not logged`);
     process.exitCode = 1;
   });
 }
-module.exports = { plan, publish, digest, rollback, verifyPublic };
-
-
+module.exports = { plan, publish, digest, rollback, verifyPublic, connection, hostingConfig, LOCAL_CONFIG, status: recovery.status, recover: recovery.recover };

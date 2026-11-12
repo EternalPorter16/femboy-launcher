@@ -6,12 +6,14 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const store = require('./store');
-const { getJson, download } = require('./net');
+const { download, throwIfCancelled } = require('./net');
+const fsx = require('./fsx');
 
-const INJECTOR_META = [
-  'https://authlib-injector.yushi.moe/artifact/latest.json',
-  'https://bmclapi2.bangbang93.com/mirrors/authlib-injector/artifact/latest.json',
-];
+// Reviewed pin: official artifact 56 and GitHub v1.2.8 asset digest, checked
+// 2026-11-11. Updating this dependency requires a new reviewed code change.
+const INJECTOR = Object.freeze(require('./injector-pin.json'));
+Object.freeze(INJECTOR.urls);
+let injectorDownload = null;
 
 let server = null;
 let baseUrl = null;
@@ -151,25 +153,38 @@ async function start() {
   return baseUrl;
 }
 
-async function ensureInjector(log = () => {}) {
-  const jar = path.join(store.baseDir(), 'authlib-injector.jar');
-  if (fs.existsSync(jar)) return jar;
+function verifiedInjector(file) {
+  try {
+    const stat = fs.lstatSync(file);
+    return stat.isFile() && stat.size === INJECTOR.size && crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex') === INJECTOR.sha256;
+  } catch { return false; }
+}
+
+async function downloadInjector(jar, log) {
   let lastError;
-  for (const metaUrl of INJECTOR_META) {
+  for (const url of INJECTOR.urls) {
+    const tmp = `${jar}.${crypto.randomBytes(8).toString('hex')}.part`;
     try {
-      const meta = await getJson(metaUrl);
-      await download(meta.download_url, jar + '.part');
-      const sha = crypto.createHash('sha256').update(fs.readFileSync(jar + '.part')).digest('hex');
-      if (meta.checksums?.sha256 && sha !== meta.checksums.sha256) throw new Error('не совпал хэш');
-      fs.renameSync(jar + '.part', jar);
-      log(`authlib-injector ${meta.version} скачан`);
+      throwIfCancelled();
+      await download(url, tmp);
+      if (!verifiedInjector(tmp)) throw new Error('Файл authlib-injector повреждён');
+      throwIfCancelled();
+      fsx.renameRetry(tmp, jar);
+      log(`authlib-injector ${INJECTOR.version} скачан`);
       return jar;
     } catch (e) {
+      if (e.cancelled) throw e;
       lastError = e;
-      fs.rmSync(jar + '.part', { force: true });
-    }
+    } finally { fs.rmSync(tmp, { force: true }); }
   }
   throw new Error('Не удалось скачать authlib-injector для скинов: ' + lastError?.message);
+}
+
+async function ensureInjector(log = () => {}) {
+  const jar = path.join(store.baseDir(), 'authlib-injector.jar');
+  if (verifiedInjector(jar)) return jar;
+  if (!injectorDownload) injectorDownload = downloadInjector(jar, log).finally(() => { injectorDownload = null; });
+  return injectorDownload;
 }
 
 // JVM-аргументы, подключающие скины оффлайн-аккаунта

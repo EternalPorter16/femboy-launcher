@@ -194,6 +194,7 @@ function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
+      spellcheck: false, // avoid background dictionary downloads in launcher fields
     },
   });
   win.loadFile(path.join(__dirname, 'renderer', 'index.html'));
@@ -238,7 +239,7 @@ function handle(channel, fn) {
       if (!e?.cancelled) logger.warn('IPC', channel, e?.message || String(e));
       // cancelled: человек сам нажал «Отменить» — интерфейс не должен ругаться красной ошибкой
       // needs2fa: Ely.by просит код двухфакторной защиты — окно входа покажет для него поле
-      return { ok: false, error: e?.message || String(e), ...(e?.cancelled && { cancelled: true }), ...(e?.needs2fa && { needs2fa: true }) };
+      return { ok: false, error: e?.message || String(e), ...(e?.cancelled && { cancelled: true }), ...(e?.needs2fa && { needs2fa: true }), ...(e?.syncFailed && { syncFailed: true }) };
     }
   });
 }
@@ -265,8 +266,9 @@ const launchProgress = (id, label, percent) => {
 const tasks = new Set();
 const launches = new Map(); // id сборки → токен отмены подготовки к запуску
 const packUpdates = new Set();
+const modInstalls = new Set();
 const backgroundJobs = new Set();
-const hasBackgroundWork = () => !!(game.isRunning() || launches.size || tasks.size || packUpdates.size || backgroundJobs.size);
+const hasBackgroundWork = () => !!(game.isRunning() || launches.size || tasks.size || packUpdates.size || modInstalls.size || backgroundJobs.size);
 const lifecycle = require('./core/lifecycle').create({ isBusy: hasBackgroundWork, hide: hideToTray, quit: () => app.quit() });
 function trackBackground(job) {
   backgroundJobs.add(job);
@@ -284,6 +286,16 @@ async function withTask(fn) {
     taskProgress(null, null);
     lifecycle.idle();
   }
+}
+
+function withModTask(id, reason, fn) {
+  if (game.isRunning(id) || launches.has(id) || packUpdates.has(id) || modInstalls.has(id)) throw new Error('Сначала закрой игру и дождись завершения задач сборки');
+  packupdate.recover(id);
+  modInstalls.add(id);
+  return withTask((p) => {
+    autoPoint(id, reason, { required: true });
+    return fn(p);
+  }).finally(() => { modInstalls.delete(id); lifecycle.idle(); });
 }
 
 // Перед тем как лаунчер сам меняет моды (обновление, оптимизация, недостающее), сохраняем точку восстановления:
@@ -344,11 +356,34 @@ async function applyProxy() {
   }
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   if (!singleLock) return; // второй экземпляр уже выходит: окно и данные принадлежат первому
+  session.defaultSession.setSpellCheckerEnabled(false);
+  session.defaultSession.setSpellCheckerLanguages([]);
+  // electron-updater ходит в своей сессии (R4-PRIV-01): без этого Chromium качает словарь орфографии (bdic) в фоне. Параметры те же, что у electron-updater
+  try {
+    const updaterSession = session.fromPartition('electron-updater', { cache: false });
+    updaterSession.setSpellCheckerEnabled(false);
+    updaterSession.setSpellCheckerLanguages([]);
+  } catch {}
   if (!portableDir) migrateOldData(app.getPath('userData')); // у portable свои данные, из профиля Windows ничего не тянем
   store.init(app.getPath('userData'));
+  const initialPrivacy = require('./core/privacy-first-run');
+  const hadProfile = initialPrivacy.hasProfile(path.join(app.getPath('userData'), 'launcher.json'));
+  let installerPrivacy = 'absent';
   logger.init(path.join(store.baseDir(), 'logs'));
+  if (app.isPackaged && !portableDir && !process.env.PORTABLE_EXECUTABLE_FILE) {
+    const privacyChoice = installerPrivacy = require('./core/privacy-install').apply(path.join(process.resourcesPath, 'privacy-install.json'), store);
+    if (privacyChoice === 'invalid') logger.warn('Installer privacy choices could not be read; existing settings retained');
+  }
+  let firstPrivacy = null;
+  if (app.isPackaged && !hadProfile && !['applied', 'already-applied'].includes(installerPrivacy)) {
+    firstPrivacy = await initialPrivacy.show({
+      BrowserWindow, ipcMain, store, lang: store.get().settings.lang,
+      policyFiles: { ru: path.join(process.resourcesPath, 'licenses', 'PRIVACY-NOTICE.txt'), en: path.join(process.resourcesPath, 'licenses', 'PRIVACY-NOTICE-EN.txt') },
+    });
+    if (!firstPrivacy.accepted) { app.quit(); return; }
+  }
   logger.info(`Femboy Launcher ${app.getVersion()} · Electron ${process.versions.electron} · ${process.platform} ${process.arch} ${require('os').release()} · данные: ${store.baseDir()}${portableDir ? ' (portable)' : ''}${pendingLaunch ? ' · запуск сборки ' + pendingLaunch.launch : ''}`);
   app.on('child-process-gone', (_e, d) => logger.error('Служебный процесс Chromium упал:', d.type, d.reason, 'код', d.exitCode));
   net.installGlobalFetch(); // библиотеки со своим fetch (вход Microsoft и др.) тоже пойдут через системный прокси
@@ -357,11 +392,14 @@ app.whenReady().then(() => {
     logger.info('Связь:', s.state, s.bad.join(', '));
   });
   applyProxy();
+  await recoverGames(); // до окна и фоновой синхронизации: сборки с живой игрой с прошлого запуска уже числятся запущенными
   createWindow();
+  firstPrivacy?.close(); // keep one window alive until the main window exists
   powerMonitor.on('on-battery', () => send('power:state', powerState()));
   powerMonitor.on('on-ac', () => send('power:state', powerState()));
   let lastUpdateState = null;
   updater.init({
+    settings: () => store.get().settings,
     onStatus: (s) => {
       send('update:status', s);
       if (s.state !== lastUpdateState) logger.info('Обновления:', s.state, s.version || '', s.error || '');
@@ -394,7 +432,12 @@ app.whenReady().then(() => {
     setTimeout(() => {
       trackBackground(sync
         .syncAll()
-        .then((r) => (r.down || r.removed) && send('app:refresh'))
+        .then((r) => {
+          // Ошибки сборок, конфликты и предупреждения показываем, а не только исключения; список обновляем, чтобы «Облако» показало итог
+          for (const e of r.errors) send('app:notify', { text: `Синхронизация: ${e}`, kind: 'err' });
+          for (const c of [...r.conflicts, ...r.warnings]) send('app:notify', { text: `Синхронизация: ${c}`, kind: 'err' });
+          send('app:refresh');
+        })
         .catch((e) => send('app:notify', { text: `Синхронизация: ${e.message}`, kind: 'err' })));
     }, 3000);
   }
@@ -648,7 +691,7 @@ handle('instances:shaders', (id) =>
 handle('instances:openFolder', (id) => shell.openPath(instances.gameDir(id)));
 handle('instances:shortcut', (id) => shortcut.create(instances.get(id))); // ярлык на рабочем столе, который сразу запускает сборку
 handle('instances:duplicate', (id) => {
-  if (game.isRunning(id) || launches.has(id) || packUpdates.has(id)) throw new Error('Сначала закрой игру и дождись завершения задач сборки');
+  if (game.isRunning(id) || launches.has(id) || packUpdates.has(id) || modInstalls.has(id)) throw new Error('Сначала закрой игру и дождись завершения задач сборки');
   return packs.duplicate(id);
 });
 // «Оптимизация»: окно показывает, что подходит сборке (plan), потом ставит выбранное (без выбора — всю «Основу»)
@@ -755,28 +798,19 @@ handle('mods:origins', (id) => origins.check(id)); // откуда каждый 
 handle('mods:health', (id) => health.check(id));
 // Поставить недостающие моды (по id мода ищем на Modrinth) и заменить неподходящие версии
 handle('mods:fixMissing', (id, ids) =>
-  withTask(async (p) => {
-    autoPoint(id, 'Перед установкой недостающих модов');
+  withModTask(id, 'Перед установкой недостающих модов', async (p) => {
     const result = { installed: [], warnings: [], notes: [] };
     for (const [i, modId] of (ids || []).slice(0, 30).entries()) {
       p(`Ставлю недостающее: ${modId} (${i + 1} / ${ids.length})`, (i / ids.length) * 100);
       const m = health.check(id).missing.find((x) => x.id === modId);
-      // Неподходящую версию откладываем в сторону: если нужной не найдётся, вернём её обратно
-      const old = m?.wrongVersion && m.file ? path.join(mods.dir(id), m.file) : null;
-      const aside = old && old + '.fixbak';
-      if (old) fs.renameSync(old, aside);
       // Условие на версию передаём установщику — он подберёт подходящую, а не самую свежую
       const parent = m ? { title: m.by, depends: new Map([[modId, m.pred]]), kind: m.kind } : null;
       try {
-        const r = await modrinth.installMod(id, modId, new Set(), parent);
+        const r = await modrinth.installMod(id, modId, new Set(), parent, m?.wrongVersion ? m.file : null);
         result.installed.push(...r.installed);
         result.warnings.push(...r.warnings);
-        if (aside) {
-          fs.rmSync(aside, { force: true });
-          if (!fs.existsSync(old)) mods.remove(id, m.file); // и запись о старой версии
-        }
       } catch (e) {
-        if (aside) fs.renameSync(aside, old);
+        if (e.cancelled) throw e;
         result.warnings.push(`${modId}: ${e.message}`);
       }
     }
@@ -784,8 +818,7 @@ handle('mods:fixMissing', (id, ids) =>
   })
 );
 handle('mods:applyUpdates', async (id, files) => {
-  const r = await withTask((p) => {
-    autoPoint(id, 'Перед обновлением модов');
+  const r = await withModTask(id, 'Перед обновлением модов', (p) => {
     return modupdates.apply(id, files, p);
   });
   // Моды изменились, значок со старым числом уже не годится: спрашиваем заново (одним запросом, без шума), остальные обновления остаются в значке
@@ -795,7 +828,7 @@ handle('mods:applyUpdates', async (id, files) => {
 
 handle('browse:search', (src, params) => source(src).search(params));
 handle('browse:categories', (src, type) => source(src).categories(type));
-handle('browse:install', (src, instId, projectId, kind) => source(src).install(instId, projectId, kind));
+handle('browse:install', (src, instId, projectId, kind) => withModTask(instId, 'Перед установкой модов', () => source(src).install(instId, projectId, kind)));
 handle('browse:installPack', (src, projectId) => withTask((p) => source(src).installModpack(projectId, p)));
 // Импорт коллекции Modrinth («Моды» → «Из коллекции», Ctrl+K): ссылка → проекты коллекции с советом для новой сборки; «подходит ли» считается
 // по выбранной цели (существующая сборка или версия с загрузчиком); установка выбранного идёт в области отмены, перед ней — точка восстановления
@@ -851,6 +884,33 @@ handle('sync:pick', async () => {
 });
 handle('sync:now', () => withTask(async (p) => (p('Синхронизирую сборки…', null), sync.syncAll((id) => game.isRunning(id)))));
 handle('sync:off', () => store.updateSettings({ syncDir: '' }));
+// «Восстановить облако с этого компьютера» (sync.publishLocal): выход, если облако застряло на «Облако ещё обновляется».
+// Только по нажатию после подтверждения в окне; не при запущенной игре и не во время задач сборки. Запуск этой сборки
+// на время восстановления запрещён (launchGame). Потом обычная синхронизация всех сборок: окно показывает итог, а не прежнюю ошибку
+const cloudPublishes = new Set();
+handle('sync:publishLocal', async (id) => {
+  if (!store.get().settings.syncDir) throw new Error('Сначала выбери папку облака');
+  if (game.isRunning(id) || launches.has(id) || packUpdates.has(id) || modInstalls.has(id) || cloudPublishes.has(id)) throw new Error('Сначала закрой игру и дождись завершения задач сборки');
+  const name = instances.get(id).name;
+  cloudPublishes.add(id);
+  try {
+    return await withTask(async (p) => {
+      p(`Восстанавливаю облако с этого компьютера: ${name}…`, null);
+      const r = await sync.publishLocal(id);
+      if (!r) throw new Error('Облако не восстановлено: синхронизация этой сборки сейчас невозможна');
+      logger.info('Облако восстановлено с этого компьютера:', id);
+      let all;
+      try {
+        all = await sync.syncAll((x) => game.isRunning(x));
+      } catch (e) {
+        all = { errors: [e.message], conflicts: [], warnings: [], skipped: [] };
+      }
+      return { name, conflicts: r.conflicts, warnings: r.warnings, all };
+    });
+  } finally {
+    cloudPublishes.delete(id);
+  }
+});
 
 handle('hw:info', () => hardware.info());
 
@@ -901,6 +961,25 @@ handle('files:drop', (instId, paths) => {
   return withTask((p) => dropin.handle(instId, paths.slice(0, 50).map(String), p));
 });
 
+handle('packs:recoveryStatus', (id) => {
+  instances.get(id);
+  return packupdate.status(id);
+});
+handle('packs:recover', (id) => {
+  instances.get(id);
+  if (game.isRunning(id) || launches.has(id) || packUpdates.has(id) || modInstalls.has(id)) throw new Error('Сначала закрой игру и дождись завершения задач сборки');
+  packUpdates.add(id);
+  return withTask(() => {
+    const recovered = packupdate.recover(id);
+    return { recovered };
+  }).finally(() => { packUpdates.delete(id); lifecycle.idle(); });
+});
+handle('packs:recoveryFolder', (id) => {
+  instances.get(id);
+  const dir = path.join(instances.dirOf(id), '.pack-update');
+  if (!fs.lstatSync(dir).isDirectory()) throw new Error('Папка восстановления не найдена');
+  return shell.openPath(dir);
+});
 handle('packs:check', (id) => {
   const pack = instances.get(id).pack;
   if (!pack?.projectId) return null;
@@ -908,7 +987,7 @@ handle('packs:check', (id) => {
 });
 handle('packs:update', (id) => {
   if (game.isRunning(id)) throw new Error('Сначала закрой игру');
-  if (launches.has(id) || packUpdates.has(id)) throw new Error('Сборка уже занята запуском или обновлением');
+  if (launches.has(id) || packUpdates.has(id) || modInstalls.has(id)) throw new Error('Сборка уже занята запуском или обновлением');
   packupdate.recover(id);
   const pack = instances.get(id).pack;
   if (!pack?.projectId) throw new Error('Сборка сделана не из модпака с Modrinth/CurseForge');
@@ -921,6 +1000,7 @@ handle('packs:update', (id) => {
 
 handle('storage:scan', () => storage.scan());
 handle('storage:clean', (ids) => {
+  if (hasBackgroundWork()) throw new Error('Сначала дождись завершения игр и фоновых задач');
   if (game.isRunning()) throw new Error('Сначала закрой игру — сейчас эти файлы могут использоваться');
   return storage.clean(ids);
 });
@@ -943,6 +1023,7 @@ handle('settings:update', async (patch) => {
   }
   const s = store.updateSettings(patch);
   discord.refresh();
+  if (patch && 'backgroundUpdateChecks' in patch) updater.refresh();
   if (patch && 'uiScale' in patch) applyScale();
   return s;
 });
@@ -958,6 +1039,10 @@ handle('game:cancel', (id) => {
   const t = launches.get(id);
   t?.cancel();
   return !!t;
+});
+handle('app:privacy', () => {
+  const en = store.get().settings.lang === 'en';
+  return shell.openPath(app.isPackaged ? path.join(process.resourcesPath, 'licenses', en ? 'PRIVACY-NOTICE-EN.txt' : 'PRIVACY-NOTICE.txt') : path.join(__dirname, '..', 'build', en ? 'privacy-notice-en.txt' : 'privacy-notice.txt'));
 });
 handle('app:openDataDir', () => shell.openPath(store.baseDir()));
 handle('app:openPath', (p) => {
@@ -987,6 +1072,32 @@ handle('app:clearBackground', () => {
 
 handle('game:kill', (id) => game.kill(id));
 
+// Игры от прошлого запуска лаунчера, который завершили принудительно (FL-GAME-01): живую подхватываем (сборка занята, ждём выхода),
+// закрывшуюся без нас только обслуживаем (копия миров); время игры при этом не начисляем, а код выхода неизвестен
+async function recoverGames() {
+  try {
+    if (!require('./core/livegames').has()) return;
+    const r = await game.recover({
+      adopted: (id) => logger.info('Найдена игра, оставшаяся от прошлого запуска лаунчера', id),
+      unverified: (ids) => logger.warn('Не удалось проверить, жива ли игра от прошлого запуска (Windows не ответила вовремя); запись сохранена, сборка может быть запущена повторно:', ids.join(', ')),
+      gone: (id, rec) => {
+        logger.info('Игра закрылась, пока лаунчер был выключен; время игры не начисляю', id);
+        trackBackground(afterGame(id, rec.startedAt));
+      },
+      closed: (id, _code, rec) => {
+        send('game:log', { line: 'Игра закрыта (код выхода неизвестен: лаунчер был перезапущен, пока игра шла)', type: 'info' });
+        send('game:state', { id, running: false, code: null, crash: null });
+        jumps.schedule();
+        trackBackground(afterGame(id, rec.startedAt));
+        if (!lifecycle.quitPending && !game.isRunning()) showWindow();
+      },
+    });
+    if (r.adopted.length) logger.info('Подхвачены игры:', r.adopted.join(', '));
+  } catch (e) {
+    logger.warn('Не удалось проверить игры от прошлого запуска:', e?.message || String(e));
+  }
+}
+
 // После игры: копии миров, потом синхронизация с облаком — в фоне, окно не ждёт
 async function afterGame(id, startedAt) {
   const s = store.get().settings;
@@ -999,7 +1110,13 @@ async function afterGame(id, startedAt) {
   } catch (e) {
     send('app:notify', { text: `Копия мира не сохранилась: ${e.message}`, kind: 'err' });
   }
-  if (s.syncDir && !game.isRunning(id)) await sync.syncInstance(id).catch((e) => send('app:notify', { text: `Синхронизация: ${e.message}`, kind: 'err' }));
+  if (s.syncDir && !game.isRunning(id)) {
+    await sync
+      .syncInstance(id)
+      .then((r) => [...(r?.conflicts || []), ...(r?.warnings || [])].forEach((c) => send('app:notify', { text: `Синхронизация: ${c}`, kind: 'err' })))
+      .catch((e) => send('app:notify', { text: `Синхронизация: ${e.message}`, kind: 'err' }));
+    send('app:refresh');
+  }
 }
 
 handle('game:launch', async (id, opts) => {
@@ -1017,15 +1134,19 @@ handle('game:launch', async (id, opts) => {
 
 async function launchGame(id, opts) {
   if (packUpdates.has(id)) throw new Error('Сначала дождись обновления модпака');
+  if (modInstalls.has(id)) throw new Error('Сначала закрой игру и дождись завершения задач сборки');
+  if (cloudPublishes.has(id)) throw new Error('Сначала дождись восстановления облака');
   packupdate.recover(id);
   // Перед игрой забираем свежее с другого компьютера
-  if (store.get().settings.syncDir && !game.isRunning(id)) {
+  // Если синхронизация не удалась, игра сама не стартует: на этом компьютере может быть устаревшая сборка, и правки разойдутся.
+  // Окно показывает причину и спрашивает «Запустить без синхронизации»; тогда оно повторяет запуск с skipSync
+  if (store.get().settings.syncDir && !game.isRunning(id) && !opts?.skipSync) {
     launchProgress(id, 'Синхронизирую с облаком…', null);
     await sync.syncInstance(id).catch((e) => {
       if (e.cancelled) throw e;
-      send('game:log', { line: `Синхронизация: ${e.message}`, type: 'error' });
+      throw Object.assign(new Error(e.message), { syncFailed: true });
     });
-  }
+  } else if (opts?.skipSync) send('game:log', { line: 'Синхронизация пропущена по твоему выбору', type: 'info' });
   let startedAt = Date.now();
   // Перед тем как мир откроют для друзей, сохраняем его копию (настройка backupBeforeFriends): если в гостях что-то сломают, останется прежний мир.
   // Замок мира игра создаёт чуть раньше, чем сервер пишет «Starting integrated…», поэтому ищем открытый мир с запасом

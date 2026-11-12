@@ -12,6 +12,15 @@ RECOVERY-KEY*
 .firebase/
 .claude/
 *.local.json
+# Адрес сервера и логин хостинга сайта — только локально (пример: build/website-hosting.local.example.json)
+build/website-hosting.local.json
+credentials.json
+**/*-key.xml
+github-token.xml
+*.pfx
+*.p12
+*.log
+*.zip
 
 # Резервные копии, результаты аудита и сборки
 backups/
@@ -34,3 +43,11 @@ docs/*
 !docs/logo.png
 !docs/installer-preview.png
 !docs/screenshots/
+
+# Public signing preparation documents only; audit notes remain private.
+!docs/ASSET-PROVENANCE.md
+!docs/PRIVACY-DRAFT.md
+!docs/SIGNING-PREPARATION.md
+
+# Generated distribution notices (rebuilt before packing)
+build/generated-notices/

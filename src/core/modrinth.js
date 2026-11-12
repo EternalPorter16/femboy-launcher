@@ -130,50 +130,105 @@ async function pickCompatible(candidates, parentOrTest) {
   for (const cand of candidates.slice(0, 15)) {
     const f = cand.files.find((x) => x.primary) || cand.files[0];
     const tmp = path.join(os.tmpdir(), `femboy-dep-${crypto.randomBytes(8).toString('hex')}-${checkedFilename(f.filename)}`);
-    await download(f.url, tmp, { sha1: f.hashes?.sha1 });
-    if (test(modmeta.readMeta(tmp))) return { version: cand, file: f, tmp };
-    fs.rmSync(tmp, { force: true });
+    let keep = false;
+    try {
+      await download(f.url, tmp, { sha1: f.hashes?.sha1 });
+      if (test(modmeta.readMeta(tmp))) { keep = true; return { version: cand, file: f, tmp }; }
+    } finally { if (!keep) fs.rmSync(tmp, { force: true }); }
   }
   return null;
 }
 
+async function prepareMod(picked) {
+  const filename = checkedFilename(picked.file.filename);
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'femboy-mod-install-'));
+  const file = path.join(dir, filename);
+  try {
+    if (picked.tmp) fs.copyFileSync(picked.tmp, file);
+    else await download(picked.file.url, file, { sha1: picked.file.hashes?.sha1 });
+    if (picked.file.hashes?.sha1 && crypto.createHash('sha1').update(fs.readFileSync(file)).digest('hex') !== picked.file.hashes.sha1.toLowerCase()) throw new Error('Файл обновления мода повреждён');
+    throwIfCancelled();
+    return { file, cleanup: () => fs.rmSync(dir, { recursive: true, force: true }) };
+  } catch (e) { fs.rmSync(dir, { recursive: true, force: true }); throw e; }
+  finally { if (picked.tmp) fs.rmSync(picked.tmp, { force: true }); }
+}
+
+// Apply the primary mod and all compatible-neighbour replacements together.
+// Downloads and compatibility checks finish before the first existing file changes.
+function commitMods(instId, changes) {
+  if (!changes.length) return;
+  const removals = new Set(changes.flatMap((c) => c.old ? [`mods/${c.old}`, `mods/${c.old}.disabled`] : []));
+  const removable = new Set([...removals].map((p) => p.toLowerCase()));
+  const targets = new Set();
+  for (const c of changes) {
+    checkedFilename(c.filename);
+    const rel = `mods/${c.filename}`, key = rel.toLowerCase();
+    if (targets.has(key)) throw new Error('Файл обновления занят другим модом');
+    targets.add(key);
+    for (const suffix of ['', '.disabled']) {
+      if (fs.existsSync(path.join(mods.dir(instId), c.filename + suffix)) && !removable.has((rel + suffix).toLowerCase())) throw new Error('Файл обновления занят другим модом');
+    }
+  }
+  let update;
+  try {
+    throwIfCancelled();
+    update = packupdate.begin(instId);
+    for (const c of changes) {
+      const staged = update.path(`mods/${c.filename}`);
+      fs.mkdirSync(path.dirname(staged), { recursive: true });
+      fs.copyFileSync(c.prepared.file, staged);
+    }
+    throwIfCancelled();
+    update.commit([...removals]);
+    const meta = mods.readMeta(instId);
+    for (const c of changes) if (c.old) delete meta[c.old];
+    for (const c of changes) meta[c.filename] = c.info;
+    fsx.writeJsonAtomic(path.join(instances.dirOf(instId), 'mods-meta.json'), meta);
+    update.finish();
+  } catch (e) {
+    try { update?.abort(); }
+    catch (rollback) { throw new Error(`${e.message}; не удалось восстановить обновление: ${rollback.message}`); }
+    throw e;
+  }
+}
+
 // Новый мод несовместим только с некоторыми версиями уже стоящего (Iris и слишком новый Sodium):
 // подбираем стоящему моду версию, с которой новый уживается. Возвращает заметки о заменах или бросает ошибку
-async function resolveClash(instId, newFile, newTitle) {
+async function resolveClash(instId, newFile, newTitle, primary = null) {
   const clash = health.checkNewMod(instId, newFile);
-  if (!clash.hard.length) return { notes: [], soft: clash.soft };
   const newMeta = modmeta.readMeta(newFile);
   const inst = instances.get(instId);
   const meta = mods.readMeta(instId);
   const notes = [];
   const unresolved = [];
+  const changes = primary ? [primary] : [];
+  try {
   for (const h of clash.hardMods) {
+    if (primary?.old === h.file) continue;
     const rec = meta[h.file];
     let picked = null;
     if (h.versionSpecific && rec?.source === 'modrinth' && rec.projectId) {
-      const candidates = await versionList(rec.projectId, inst.version, loadersFor(inst.loader)).catch(() => []);
+      const candidates = await versionList(rec.projectId, inst.version, loadersFor(inst.loader)).catch((e) => { if (e.cancelled) throw e; return []; });
       picked = await pickCompatible(candidates, (m) => m?.id && !modmeta.conflictBetween(newMeta, m)?.hard);
     }
     if (!picked) {
       unresolved.push(h.name);
       continue;
     }
-    mods.remove(instId, h.file);
-    const dest = path.join(mods.dir(instId), checkedFilename(picked.file.filename));
-    fsx.breakLink(dest);
-    fs.copyFileSync(picked.tmp, dest);
-    fs.rmSync(picked.tmp, { force: true });
-    mods.record(instId, picked.file.filename, { ...rec, version: picked.version.version_number });
+    const prepared = await prepareMod(picked);
+    changes.push({ old: h.file, filename: checkedFilename(picked.file.filename), prepared, info: { ...rec, version: picked.version.version_number } });
     notes.push(`«${h.name}» заменён на версию ${picked.version.version_number} — такую требует «${newTitle}»`);
   }
   if (unresolved.length) {
     throw new Error(`«${newTitle}» несовместим с ${unresolved.map((n) => `«${n}»`).join(', ')} — так указано в самом моде. Не ставлю, чтобы игра не сломалась`);
   }
+  commitMods(instId, changes);
   return { notes, soft: clash.soft };
+  } finally { for (const c of changes) if (c !== primary) c.prepared.cleanup(); }
 }
 
 // parent — метаданные мода, которому нужна эта зависимость: { title, depends, kind }
-async function installMod(instId, projectId, seen = new Set(), parent = null) {
+async function installMod(instId, projectId, seen = new Set(), parent = null, replaceFile = null) {
   const result = { installed: [], warnings: [], notes: [] };
   // Сначала узнаём настоящий id: projectId может быть и слагом (например «sodium»)
   const project = await getJson(`${API}/project/${enc(projectId)}`);
@@ -184,7 +239,7 @@ async function installMod(instId, projectId, seen = new Set(), parent = null) {
   seen.add(project.id);
 
   // Уже стоит? Оставляем, если версия подходит родителю; иначе заменим на совместимую
-  const existing = installedFile(instId, project.id);
+  const existing = replaceFile ? checkedFilename(replaceFile) : installedFile(instId, project.id);
   if (existing && modmeta.satisfies(modmeta.readMeta(mods.filePath(instId, existing)), parent?.depends, parent?.kind)) return result;
 
   const candidates = await versionList(project.id, inst.version, loadersFor(inst.loader));
@@ -197,35 +252,18 @@ async function installMod(instId, projectId, seen = new Set(), parent = null) {
   }
 
   const dest = path.join(mods.dir(instId), checkedFilename(picked.file.filename));
-  if (existing) {
-    mods.remove(instId, existing);
-    result.notes.push(`«${project.title}» заменён на версию ${picked.version.version_number} — такую требует «${parent.title}»`);
-  }
-  if (picked.tmp) {
-    fs.mkdirSync(path.dirname(dest), { recursive: true });
-    fsx.breakLink(dest);
-    fs.copyFileSync(picked.tmp, dest);
-    fs.rmSync(picked.tmp, { force: true });
-  } else {
-    await download(picked.file.url, dest, { sha1: picked.file.hashes?.sha1 });
-  }
+  const prepared = await prepareMod(picked);
   // Сам мод говорит, с чем он несовместим — не ставим то, что сломает игру (или подбираем другую версию соседа)
   let clash;
   try {
-    clash = await resolveClash(instId, dest, project.title);
-  } catch (e) {
-    fs.rmSync(dest, { force: true });
-    throw e;
-  }
+    clash = await resolveClash(instId, prepared.file, project.title, {
+      old: existing, filename: picked.file.filename, prepared,
+      info: { ...(existing ? mods.readMeta(instId)[existing] : {}), source: 'modrinth', projectId: project.id, title: project.title, icon: project.icon_url || null, version: picked.version.version_number },
+    });
+  } finally { prepared.cleanup(); }
+  if (existing) result.notes.push(`«${project.title}» заменён на версию ${picked.version.version_number} — такую требует «${parent?.title || project.title}»`);
   result.notes.push(...clash.notes);
   if (clash.soft.length) result.warnings.push(`«${project.title}» может плохо работать вместе с ${clash.soft.map((n) => `«${n}»`).join(', ')} — так предупреждает сам мод`);
-  mods.record(instId, picked.file.filename, {
-    source: 'modrinth',
-    projectId: project.id,
-    title: project.title,
-    icon: project.icon_url || null,
-    version: picked.version.version_number,
-  });
   result.installed.push(project.title);
 
   // Условия этого мода на его собственные зависимости берём из самого jar
@@ -262,6 +300,7 @@ async function installJarDeps(instId, own, title, result, seen = new Set()) {
     try {
       merge(result, await installMod(instId, id, seen, { title, depends: own.depends, kind: own.kind }));
     } catch (e) {
+      if (e.cancelled) throw e;
       result.warnings.push(`«${title}» нужен мод «${id}», но автоматически поставить его не вышло: ${e.message.replace(/ — https.*/, '')}`);
     }
   }
@@ -274,6 +313,7 @@ async function installDeps(instId, version, result, seen = new Set(), parent = n
       const depId = dep.project_id || (await getJson(`${API}/version/${enc(dep.version_id)}`)).project_id;
       merge(result, await installMod(instId, depId, seen, parent));
     } catch (e) {
+      if (e.cancelled) throw e;
       result.warnings.push(e.message);
     }
   }
@@ -390,9 +430,10 @@ async function installModpack(projectId, progress) {
 }
 
 function readIndex(file) {
-  const zip = new AdmZip(file);
+  const zip = require('./archive').open(file);
   const index = JSON.parse(zip.readAsText('modrinth.index.json') || 'null');
   if (!index) throw new Error('Это не модпак Modrinth (нет modrinth.index.json)');
+  if (!Array.isArray(index.files) || index.files.length > require('./archive').LIMITS.entries) throw new Error('Некорректный или слишком большой список файлов модпака');
   const deps = index.dependencies || {};
   if (!deps.minecraft) throw new Error('В модпаке не указана версия Minecraft');
   const key = Object.keys(PACK_LOADERS).find((k) => deps[k]);

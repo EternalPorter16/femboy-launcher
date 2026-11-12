@@ -10,6 +10,10 @@ const portable = !!process.env.PORTABLE_EXECUTABLE_FILE;
 let status = { state: 'idle', current: app.getVersion() };
 let notify = () => {};
 let canRestart = () => true;
+let getSettings = () => ({});
+let initialTimer = null, intervalTimer = null, backgroundToken = null;
+let initialized = false;
+const enabled = () => getSettings().backgroundUpdateChecks !== false;
 
 function set(patch) {
   status = { ...status, ...patch };
@@ -24,7 +28,8 @@ if (feedUrl && (new URL(feedUrl).protocol !== 'https:' || new URL(feedUrl).usern
 const releasesUrl = downloadPage || yandex || (/^[\w.-]+\/[\w.-]+$/.test(repo) ? `https://github.com/${repo}/releases/latest` : null);
 const HOST = feedUrl ? new URL(feedUrl).hostname : yandex ? 'cloud-api.yandex.net' : 'api.github.com';
 
-function init({ onStatus, isBusy }) {
+function init({ onStatus, isBusy, settings = () => ({}) }) {
+  getSettings = settings;
   notify = onStatus;
   canRestart = () => !isBusy();
   // В режиме разработки (npm start) обновляться нечему
@@ -48,18 +53,42 @@ function init({ onStatus, isBusy }) {
   autoUpdater.on('update-not-available', () => (net.noteResult(HOST, true), set({ state: 'latest', checkedAt: Date.now() })));
   autoUpdater.on('update-available', (info) => {
     net.noteResult(HOST, true);
-    set({ state: portable ? 'available' : 'downloading', version: info.version, percent: 0, notes: info.releaseNotes || null });
+    set({ state: portable || !autoUpdater.autoDownload ? 'available' : 'downloading', version: info.version, percent: 0, notes: info.releaseNotes || null });
   });
   autoUpdater.on('download-progress', (p) => set({ state: 'downloading', percent: Math.round(p.percent) }));
   autoUpdater.on('update-downloaded', (info) => set({ state: 'ready', version: info.version, percent: 100 }));
   autoUpdater.on('error', (e) => {
+    if (!enabled() && /^(?:cancelled|canceled)$/i.test(e?.message || '')) return;
     if (net.isNetworkError(e)) net.noteResult(HOST, false); // отсутствие файла источника — это не про связь
     set({ state: 'error', error: String(e?.message || e).split('\n')[0] });
   });
 
-  const check = () => autoUpdater.checkForUpdates().catch(() => {});
-  setTimeout(check, 8000);
-  setInterval(check, CHECK_EVERY_MS);
+  initialized = true;
+  refresh();
+}
+
+function refresh() {
+  if (!initialized) return;
+  if (initialTimer !== null) clearTimeout(initialTimer);
+  if (intervalTimer !== null) clearInterval(intervalTimer);
+  initialTimer = intervalTimer = null;
+  autoUpdater.autoDownload = !portable && enabled();
+  autoUpdater.autoInstallOnAppQuit = !portable && enabled();
+  if (!enabled()) {
+    backgroundToken?.cancel?.(); backgroundToken = null;
+  } else {
+    const poll = async () => {
+      if (!enabled()) return;
+      try {
+        const result = await autoUpdater.checkForUpdates();
+        if (!enabled()) result?.cancellationToken?.cancel?.();
+        else backgroundToken = result?.cancellationToken || null;
+      } catch {}
+    };
+    initialTimer = setTimeout(poll, 8000);
+    intervalTimer = setInterval(poll, CHECK_EVERY_MS);
+  }
+  set({ portable, backgroundUpdateChecks: enabled(), ...(!enabled() && ['checking', 'downloading'].includes(status.state) ? { state: 'idle', percent: 0, error: null } : {}) });
 }
 
 async function check() {
@@ -81,4 +110,4 @@ function openDownload() {
   shell.openExternal(releasesUrl);
 }
 
-module.exports = { init, check, install, openDownload, status: () => status, portable };
+module.exports = { init, refresh, check, install, openDownload, status: () => status, portable };

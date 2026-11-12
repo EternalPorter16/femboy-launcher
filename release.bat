@@ -25,7 +25,8 @@ set ELECTRON_BUILDER_BINARIES_MIRROR=https://npmmirror.com/mirrors/electron-buil
 set CSC_IDENTITY_AUTO_DISCOVERY=false
 set PUBLISH=never
 rem Separate output folder, so a launcher running from dist does not lock the build
-call npx electron-builder --win --publish %PUBLISH% --config.directories.output=dist-release || (pause & exit /b 1)
+rem Build only reviewed committed sources and record exact source/artifact hashes. Never auto-commit.
+node build\release-build.js dist-release || (pause & exit /b 1)
 echo.
 rem Main source first: installers, public hash checks, then latest.yml. Stop on failure.
 powershell -NoProfile -ExecutionPolicy Bypass -File build\publish-s3.ps1 -Out dist-release || (pause & exit /b 1)
@@ -39,7 +40,7 @@ rem Build and deploy the website only AFTER both launcher uploads succeed.
 if exist website\package.json (
   node build\website-release.js dist-release --build && call build\deploy-website.bat || echo WARNING: Launcher is published, but website update failed. Retry: node build/website-release.js dist-release --build ^&^& build\deploy-website.bat
 )
-rem Reserve copy on GitHub (source push + release with installers). Runs last; skipped without a saved token; a failure never cancels the release.
+rem Reserve copy on GitHub (verified installers only, no source commit/push). Publish the reviewed source commit separately.
 powershell -NoProfile -ExecutionPolicy Bypass -File build\publish-github.ps1 -Out dist-release || echo WARNING: Launcher is published, but the GitHub reserve step failed. Retry: powershell -File build\publish-github.ps1 -Out dist-release
 rem A failed clean-up must not leave an error code behind: the release itself went through
 ver >nul

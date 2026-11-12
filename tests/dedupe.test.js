@@ -126,7 +126,10 @@ test('прямая запись поверх мода сначала снима�
   const read = (f) => fs.readFileSync(path.join(__dirname, '..', 'src', f), 'utf8');
   // Download now renames a verified temporary file; hardlink preservation is
   // exercised behaviorally in audit-download-safety.test.js.
-  assert.equal((read('core/modrinth.js').match(/fsx\.breakLink\((?:dest|target)\);\s*fs\.(copyFileSync|writeFileSync)/g) || []).length, 3, 'Modrinth: два копирования и распаковка модпака');
+  // Individual Modrinth replacements now use packupdate; their hardlink safety
+  // is exercised in audit-dependency-replacement.test.js. Direct ZIP overrides
+  // still need to break a hardlink before writing in place.
+  assert.match(read('core/modrinth.js'), /fsx\.breakLink\(target\);\s*fs\.writeFileSync/, 'Modrinth: прямая распаковка overrides');
   assert.equal((read('core/curseforge.js').match(/fsx\.breakLink\((?:dest|target)\);\s*fs\.(copyFileSync|writeFileSync)/g) || []).length, 2, 'CurseForge');
   assert.match(read('core/dropin.js'), /fsx\.breakLink\(path\.join\(dir, name\)\);\s*fs\.copyFileSync/, 'перетаскивание файла');
 });

@@ -36,6 +36,7 @@ function defaults() {
       accentColor: '#ff5fa8', // для акцента «свой цвет»
       cfApiKey: '',
       lang: 'ru', // язык интерфейса: ru | en
+      backgroundUpdateChecks: true, // scheduled launcher update checks/downloads
       discordRpc: true, // показывать игру в Discord
       discordHideServer: false, // не показывать адрес сервера в Discord
       clearWhitelist: true, // очищать белый список, когда закрыт мир, открытый для друзей, и когда закрыта игра

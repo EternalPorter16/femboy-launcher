@@ -174,6 +174,17 @@ const FRIEND_CHECK_EN = `
   closeModal();
   texts.push(document.querySelector('#clearWhitelist').closest('.card').innerText);
   texts.push(document.querySelector('#gameProxy').closest('.card').innerText);
+  // Карточка синхронизации с кнопкой «Восстановить облако…» и её окно подтверждения. Имена сборок — данные человека, «Корзина» — имя папки в облаке
+  texts.push(document.querySelector('#syncRestore').closest('.card').innerText);
+  closeModal(); await s(250); restoreCloudDialog(); await s(500);
+  {
+    const c = document.querySelector('#modalBox').cloneNode(true);
+    c.querySelector('#srInst')?.remove();
+    let t = c.innerText || c.textContent;
+    for (const i of state.instances) t = t.split(i.name).join('');
+    texts.push(t.replace(/“Корзина”/g, ''));
+  }
+  document.querySelector('#modalBox').isDirty = null; closeModal(); await s(250);
   showPage('accounts'); await s(400); texts.push(document.querySelector('#accList').innerText); showPage('instances');
   await copyNick('Boykisser_'); await s(300); texts.push(document.querySelector('#toasts').innerText);
   // Корзина и подтверждение удаления
@@ -485,6 +496,34 @@ function extra(version) {
     ['ход запуска', `setProgress('Проверка', 40); await s(300); const a = !!document.querySelector('#pbCancel'); hideProgress(); return a`],
     ['достижения', `renderAchievements(); announceAchievements(); return 1`],
     ['синхронизация и железо', `renderSync(); await renderHardware(); return 1`],
+    // «Восстановить облако с этого компьютера»: имя сборки и «Корзина» в подтверждении, отмена ничего не вызывает, при запущенной игре
+    // подтверждение недоступно, успех — тост после ответа, ошибка — красный тост без успеха. Сам publishLocal подменён: облака в профиле нет
+    ['восстановление облака: подтверждение, отмена, запрет при игре, успех и ошибка', `
+      const o2 = window.call; const calls = []; let mode = 'ok';
+      window.call = async (ch, ...a) => { if (ch === 'sync:publishLocal') { calls.push(a[0]); if (mode === 'err') throw new Error('EPERM: operation not permitted, rename'); return { name: instById(a[0]).name, conflicts: [], warnings: [], all: { errors: [], conflicts: [], warnings: [] } }; } return o2(ch, ...a); };
+      const q = (x) => document.querySelector(x);
+      const toastTexts = () => [...document.querySelectorAll('#toasts .toast')].map((t) => t.innerText);
+      const inst = ${INST};
+      const open = async () => { closeModal(); await s(300); restoreCloudDialog(); await s(350); q('#srInst').value = inst.id; q('#srInst').dispatchEvent(new Event('change')); };
+      try {
+        await open();
+        const text = q('#srText').textContent;
+        const named = text.includes('«' + inst.name + '»') && text.includes('«Корзина»') && q('#srInst').options.length === state.instances.length;
+        q('#srNo').click(); await s(300);
+        const cancelled = !q('#modal').classList.contains('open') && calls.length === 0;
+        state.running.add(inst.id); await open();
+        const blocked = q('#srYes').disabled && !q('#srBusy').hidden && q('#srBusy').textContent.includes(inst.name);
+        q('#srYes').click(); await s(200);
+        const blockedCalls = calls.length;
+        state.running.delete(inst.id);
+        let before = toastTexts().length; await open(); q('#srYes').click(); await s(700);
+        const okToast = toastTexts().slice(before).some((t) => t.includes('Облако восстановлено с этого компьютера: «' + inst.name + '»'));
+        mode = 'err'; before = toastTexts().length; await open(); q('#srYes').click(); await s(700);
+        const after = toastTexts().slice(before);
+        const errOk = after.some((t) => t.includes('EPERM')) && !after.some((t) => t.includes('Облако восстановлено'));
+        const r = { named, cancelled, blocked, blockedCalls, okToast, errOk, calls: calls.length };
+        return named && cancelled && blocked && blockedCalls === 0 && okToast && errOk && calls.length === 2 ? r : 'EXC ' + JSON.stringify(r);
+      } finally { window.call = o2; state.running.delete(inst.id); closeModal(); await s(300); }`],
     ['место на диске', `showPage('settings'); await scanStorage(); await s(1500); showPage('instances'); return 1`],
     ['страницы по кругу', `for (const p of ['mods', 'accounts', 'settings', 'console', 'instances']) { showPage(p); await s(500); } return document.body.dataset.page`],
     [
@@ -1551,6 +1590,45 @@ function extra(version) {
           return Object.values(res).every(Boolean) ? true : 'EXC не сошлось: ' + Object.keys(res).filter((k) => !res[k]).join(',');
         } finally { localStorage.removeItem('recapOpts'); q('#modalBox').isDirty = null; closeModal(); showPage('instances'); }`,
     ],
+    ['восстановление обновления: резервная запись и безопасный отказ', `
+      const originalCall = window.call;
+      let mode = 'ready', recovered = 0, opened = 0, failOnce = true;
+      window.call = async (ch, ...args) => {
+        if (ch === 'packs:recoveryStatus') return mode === 'ready' ? { pending: true, canRecover: true, source: 'backup' } : mode === 'blocked' ? { pending: true, canRecover: false, reason: 'FIXTURE <img id="recovery-x">' } : { pending: false };
+        if (ch === 'packs:recover') { if (failOnce) { failOnce = false; throw new Error('FIXTURE retry'); } recovered++; mode = 'none'; return { recovered: true }; }
+        if (ch === 'packs:recoveryFolder') { opened++; return ''; }
+        return originalCall(ch, ...args);
+      };
+      try {
+        const inst = ${INST}; openDetails(inst, 'more'); await s(700);
+        const recover = document.querySelector('[data-m="recoverupdate"]');
+        if (!recover || !document.querySelector('#updateRecovery').innerText.includes('Прерванное обновление')) return false;
+        recover.click(); await s(300); if (recover.disabled) return false;
+        recover.click(); await s(900);
+        if (recovered !== 1 || document.querySelector('[data-m="recoverupdate"]')) return false;
+        mode = 'blocked'; renderMore(inst, document.querySelector('#detBody')); await s(600);
+        if (document.querySelector('[data-m="recoverupdate"]') || document.querySelector('#recovery-x')) return false;
+        const folder = document.querySelector('[data-m="recoveryfiles"]'); if (!folder) return false;
+        folder.click(); await s(200);
+        return opened === 1 && document.querySelector('#updateRecovery').innerText.includes('FIXTURE');
+      } finally { window.call = originalCall; document.querySelector('#modalBox').isDirty = null; closeModal(); }
+    `],
+    ['приватность: фоновые обновления и локальный текст RU/EN', `
+      const originalCall = window.call;
+      let policyOpened = 0;
+      window.call = async (ch, ...args) => { if (ch === 'app:privacy') { policyOpened++; return ''; } return originalCall(ch, ...args); };
+      const old = state.settings.backgroundUpdateChecks;
+      try {
+        showPage('settings'); await s(300);
+        const toggle = document.querySelector('#backgroundUpdateChecks');
+        if (!toggle || !document.querySelector('#openPrivacy')) return false;
+        toggle.checked = false; toggle.dispatchEvent(new Event('change')); await s(300);
+        if (state.settings.backgroundUpdateChecks !== false) return false;
+        document.querySelector('#openPrivacy').click(); await s(100);
+        toggle.checked = true; toggle.dispatchEvent(new Event('change')); await s(300);
+        return policyOpened === 1 && state.settings.backgroundUpdateChecks === true;
+      } finally { window.call = originalCall; await saveSettings({backgroundUpdateChecks: old !== false}); }
+    `],
     ['сезонное оформление', `
       const oldSettings = { ...state.settings };
       const realSeason = season;

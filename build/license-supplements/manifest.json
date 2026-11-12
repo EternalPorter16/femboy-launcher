@@ -1,0 +1,108 @@
+{
+  "schema": 1,
+  "scope": "Exact-version preservation supplements, not a legal approval or a replacement license",
+  "packages": {
+    "checksum@0.1.1": {
+      "license": "MIT",
+      "reviewRequired": false,
+      "inputHashes": {
+        "package.json": "296e57d18e47f3e327ba2bdfad3ad60d479cd9984324c92496bf7ea6767fa2aa",
+        "checksum.js": "6cb187b765d3a555a4ed6b9836d5e0bae236edd5df7200a01f56d0224e2093da",
+        "bin/checksum-cli.js": "2f8a22360d781fd4fdb4cae566dfb5caefe4e3f5acb808826bbe4d895ae5d642"
+      },
+      "notices": [
+        {
+          "file": "checksum-0.1.1-MIT.txt",
+          "sha256": "523044a381c5f2c89d1aad48860bfcc1c066a4b151a32615b7b4126d9c424d02",
+          "kind": "upstream-attribution-with-canonical-terms"
+        }
+      ],
+      "provenance": [
+        {
+          "url": "https://raw.githubusercontent.com/dshaw/checksum/247117b0634b7a56c4234ebe3416fc171922b864/checksum.js",
+          "sha256": "6cb187b765d3a555a4ed6b9836d5e0bae236edd5df7200a01f56d0224e2093da",
+          "retrieved": "2026-11-11"
+        },
+        {
+          "url": "https://raw.githubusercontent.com/dshaw/checksum/247117b0634b7a56c4234ebe3416fc171922b864/package.json",
+          "sha256": "296e57d18e47f3e327ba2bdfad3ad60d479cd9984324c92496bf7ea6767fa2aa",
+          "retrieved": "2026-11-11"
+        },
+        {
+          "url": "https://raw.githubusercontent.com/spdx/license-list-data/617f1a78824394ada7525017d98c6fb215aad09b/json/details/MIT.json",
+          "sha256": "3288d46f6e397df6c8859b675a5156cdd97016dbeb981b493bbb654859458c60",
+          "retrieved": "2026-11-11"
+        }
+      ]
+    },
+    "tr46@0.0.3": {
+      "license": "MIT",
+      "reviewRequired": false,
+      "inputHashes": {
+        "package.json": "615087f58ee138fd35c2b414c355b72e36e5919725b8aecc1c34f6a5585b9779",
+        "index.js": "8194f9425ce9ab06ea9aebcd64a85ec064d95d61bb349f8f1c98762ad256638e",
+        "lib/mappingTable.json": "b6b39724dca9011113a08d9d6910204062b58169e98952acdfbd19bf2c31bbff"
+      },
+      "additionalLicenses": [
+        "Unicode-3.0"
+      ],
+      "notices": [
+        {
+          "file": "tr46-0.0.3-MIT.txt",
+          "sha256": "eeed1ca176eebad5c73870e233cfff03981fecd319c969475dfa3633036c336b",
+          "kind": "upstream-license"
+        },
+        {
+          "file": "tr46-0.0.3-Unicode.txt",
+          "sha256": "a1a1003fc0f51e90153a812e4506ce1c53aa1cf6556421e93f28596c5a96568a",
+          "kind": "unicode-data-attribution"
+        }
+      ],
+      "provenance": [
+        {
+          "url": "https://raw.githubusercontent.com/jsdom/tr46/3a6f29721e7063b9ffd421e461a54beae6170001/LICENSE.md",
+          "sha256": "eeed1ca176eebad5c73870e233cfff03981fecd319c969475dfa3633036c336b",
+          "retrieved": "2026-11-11"
+        },
+        {
+          "url": "https://www.unicode.org/Public/idna/8.0.0/IdnaMappingTable.txt",
+          "sha256": "5e9f5929130b713e698162ac5b60a99ccfb831606686b1c50777cd920b55dee2",
+          "retrieved": "2026-11-11"
+        },
+        {
+          "url": "https://www.unicode.org/license.txt",
+          "sha256": "e7a93b009565cfce55919a381437ac4db883e9da2126fa28b91d12732bc53d96",
+          "retrieved": "2026-11-11"
+        }
+      ],
+      "evidence": "The license-only commit has npm gitHead a8009f9ce80ff5dbe71dd71e203afe4e4c878d28 as its parent; package.json/index.js/mappingTable.json byte-match. Unicode 8 transformation matches the installed data."
+    },
+    "lazy-val@1.0.5": {
+      "license": "MIT",
+      "reviewRequired": true,
+      "inputHashes": {
+        "package.json": "a5096f95098452cf6fe5c8ac9be8f13f59ab7c9f605ba5ef92c91b2c505744f0",
+        "out/main.js": "358fa8cba70c9140edafa85c0b7b25c7261939480186167e6b3440905f5b47da"
+      },
+      "notices": [
+        {
+          "file": "lazy-val-1.0.5-reference.txt",
+          "sha256": "ee576e5c1aad36ccae3c20ad0e3d0ca428fa7fcda9249bceafcd17c31331579e",
+          "kind": "unconfirmed-upstream-notice-canonical-reference"
+        }
+      ],
+      "provenance": [
+        {
+          "url": "https://github.com/develar/lazy-val/blob/b69ad4119f1b19bdab13c61ee2fcc88d46b89071/package.json",
+          "retrieved": "2026-11-11"
+        },
+        {
+          "url": "https://raw.githubusercontent.com/spdx/license-list-data/617f1a78824394ada7525017d98c6fb215aad09b/json/details/MIT.json",
+          "sha256": "3288d46f6e397df6c8859b675a5156cdd97016dbeb981b493bbb654859458c60",
+          "retrieved": "2026-11-11"
+        }
+      ],
+      "openIssue": "https://github.com/develar/lazy-val/issues/4"
+    }
+  }
+}

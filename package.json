@@ -97,10 +97,40 @@
         "en_US"
       ],
       "language": "1049",
-      "artifactName": "FemboyLauncher-Setup-${version}.${ext}"
+      "artifactName": "FemboyLauncher-Setup-${version}.${ext}",
+      "include": "build/installer-privacy.nsh"
     },
     "portable": {
       "artifactName": "FemboyLauncher-Portable-${version}.${ext}"
-    }
-  }
+    },
+    "beforePack": "./build/third-party-notices.js",
+    "extraResources": [
+      {
+        "from": "LICENSE",
+        "to": "licenses/Femboy-Launcher-GPL-3.0.txt"
+      },
+      {
+        "from": "src/renderer/fonts/LICENSE-fonts.txt",
+        "to": "licenses/FONT-LICENSES.txt"
+      },
+      {
+        "from": "build/generated-notices/THIRD_PARTY_NOTICES.txt",
+        "to": "licenses/THIRD_PARTY_NOTICES.txt"
+      },
+      {
+        "from": "build/generated-notices/NOTICE-INVENTORY.json",
+        "to": "licenses/NOTICE-INVENTORY.json"
+      },
+      {
+        "from": "build/privacy-notice.txt",
+        "to": "licenses/PRIVACY-NOTICE.txt"
+      },
+      {
+        "from": "build/privacy-notice-en.txt",
+        "to": "licenses/PRIVACY-NOTICE-EN.txt"
+      }
+    ],
+    "afterPack": "./build/verify-packaged-notices.js"
+  },
+  "license": "GPL-3.0-only"
 }

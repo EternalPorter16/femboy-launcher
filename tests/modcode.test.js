@@ -123,9 +123,31 @@ test('размер: код для 60, 150 и 220 модов остаётся в 
   assert.ok(own.length <= 1200, `60 модов и 5 чужих файлов: ${own.length} знаков`);
 });
 
+// Воспроизводимые наборы вместо случайных id. LEGACY_* — настоящие коды лаунчера 0.10.2 (без поля h) для тех же наборов
+const IDS_118 = ['DVA2JIsN', 'SDSEsPG7', 'izDThKKX', 'icph2Wlj', '756lCdPA', '90CLSrRI', 'LTzyEfNB', 'JFEGONb6', 'AcXknOeI', 'BXmFqB8I', 'tJwgBAjU', '9Trda1gQ', 'BQuoR954', 't9qEtLra', 'AGgvIHBu', 'LBXSpL8w', 'o7x9P0Ms', 'PNfCccf7', 'lrrONOLH', 'CG5oBd9g', 'L9WfPsEt', 'kIz5MZa2', '8nbLZoSh', 'aWMo48vn', 'cJirnlon', '1php8GfS', '0ulz4kgI', 'a7DrwSoy', 'PxuXoRyV', 'GJMa8td4'];
+const IDS_7 = ['AD8rgZcO', 'itPJvgMW', 'ShS8P2LI', 'JShvE4im', 'q7m5zCKW', 'aBFvWad6', 'rqUWII4T', 'LnUCq5hz', 'o5Hgo37z', 'k77iyAfU', 'siu8izan', 'tiTOAB6z', 'nAmks9R9', 'oxmzI9fj', 'JYNy1to9', 'lt7eOkx0', 'LidgLPbd', 'KAKBG28D', 'KZetWWxs', 'xgxZiSgw', 'EPzzwaW5', 'PWdzZ8ib', 'UhS2j90e', 'br5ioKqY', 'l1XSFqt7', 'TQEs5wz7', 'O8RhYsvm', 'smkQzdIs', 'cii37JGR', 'gY41g4Re'];
+const IDS_42 = ['lb0pKgQm', '1dP2uTMf', 'qlAdzDkB', 'QDLwgBK0', 'eyTbCDik'];
+const OTHERS_42 = [{ name: 'own-mod-1.0.jar', hash: '0123456789abcdef' }, { name: 'sodium-extra-fabric-0.5.1+mc1.20.1.jar', hash: 'fedcba9876543210' }];
+const LEGACY_118 = 'FLM1:348:eNoVx8mOgjAAANB/6dkQICCUGwXEYlm0jhJvtQyLIsWyODKZf5/4bu8XzMDRVuDBgQM0RVcVDaxACxxQsqts+CczcICqaKaighV4fDK1i3GvsNbXvR2W1DLXrVdkrt1dyUXQGqoeofKA4VEWTKv2bljNeIsml+f3Lv3GaD+JAzQNlD82T2RjLzQFKmDln1w9wkMSRjGzx8KINkGYJtc1gecyG4KRoJz2xH6R4/IOygRlSelxXlrZz5SLw/tEfRoMWWgxy5cvKt7sHAvDnjseNbJrRdfwvtbP7a1Z/GO92+V3vJjxhemtlGmSkq2wfmCmxsMIn8FIJBujV4Xc2xf4+wf5DV3q';
+const LEGACY_7 = 'FLM1:347:eNoVx8lygjAYAOB3+c8OQ5AY4IZrWVoQZFK4sRkiRoaliHH67p1+t+8NM1hoBaIEC5CiqQqCFdzBgmteDLz8zwwWqArCigorEGCBvTcGlpXBIZTymVPsxs180Llw068XmjrTs73tSTP2XlZPlC6jzyvmh0XlP5JdjxsZGFGTjrMIaSUzgxdxExuh5juX82HET0mSJtZuplrn2+NM82pTDJh3Xp+WnK+Je4pYqiOmRzWfQndmn7QlhL/sa3JH3/Gxn8h9InXQLurDFu1oRmaHP1i3JrJbhHTM660nAsudR4c+oY6jX0b+Y3CZP0bRnmXljBO/BPZ2Ixe2ZDxmT/j9A2GnYHo';
+const LEGACY_42 = 'FLM1:232:eNotjssOgjAUBf/lbG2bWxDR7lR2aqKJO8KiDzAIFUXxGf/dEFyeZCZzPrhDSQZvoSBFQEKCoYZCoU1b2n7coUBCRoLA4HvObYNuvyl2yfpxWKwof+3NMimr2tB5ddj5Sz1376RagKGBSlM0jxP3jeNSkDjqFgwkg3AcTeLpTBvr8gIZS3FtXNl5nj9vreZDn5OIhBx5O3z720XurNGzaTyJxmEgCVn2/QE7ajlv';
+const SETS = [
+  { name: '30 модов (найденный случай)', data: { ...HOST, ids: IDS_118, others: [] }, legacy: LEGACY_118 },
+  { name: '30 модов', data: { ...HOST, ids: IDS_7, others: [] }, legacy: LEGACY_7 },
+  { name: '5 модов и 2 чужих файла', data: { ...HOST, ids: IDS_42, others: OTHERS_42 }, legacy: LEGACY_42 },
+];
+const bodyAt = (code) => code.indexOf(':', 5) + 1;
+// i-й знак тела кода заменён на ch
+const swapAt = (code, i, ch) => code.slice(0, bodyAt(code) + i) + ch + code.slice(bodyAt(code) + i + 1);
+const inflated = (code) => zlib.inflateSync(Buffer.from(code.slice(bodyAt(code)), 'base64'));
+const rawCode = (obj) => {
+  const body = zlib.deflateSync(Buffer.from(JSON.stringify(obj))).toString('base64').replace(/=+$/, '');
+  return `FLM1:${body.length}:${body}`;
+};
+
 test('распаковка: чужой текст, обрезанный, повреждённый, слишком большой и «из будущего» код — понятная причина, а не падение', (t) => {
   const { modcode } = setup(t);
-  const code = modcode.pack({ ...HOST, ids: Array.from({ length: 30 }, randomId), others: [] });
+  const code = modcode.pack({ ...HOST, ids: IDS_7, others: [] }); // постоянный набор: порча знака 40 этого кода заведомо меняет поток
   const fails = (text, kind, re) => assert.throws(() => modcode.unpack(text), (e) => e.code === kind && re.test(e.message), `${kind}: ${String(text).slice(0, 40)}`);
   fails('просто текст', 'foreign', /не код сборки/);
   fails('', 'foreign', /не код сборки/);
@@ -169,6 +191,73 @@ test('распаковка: содержимое проверяется — ти
     ['корень не объект', [1, 2, 3]],
   ];
   for (const [what, o] of bad) assert.throws(() => modcode.unpack(make(o)), (e) => e.code === 'bad', what);
+});
+
+test('порча одного знака, найденный случай: другая запись тех же длин кодов Хаффмана — данные те же, и код принимается', (t) => {
+  const { modcode } = setup(t);
+  // Знак 39 тела LEGACY_118 ('L' → 'A') лежит в заголовке блока deflate: запись «повтори предыдущую длину кода (6) три раза»
+  // (символ 16) превращается в три явных «6». Таблица длин та же, значит те же деревья Хаффмана, те же байты после распаковки и та же
+  // сумма Adler-32. Это другая допустимая запись тех же данных, а не их изменение. Прежний тест требовал отказа для любой замены знака
+  // в случайном коде и поэтому падал примерно на 0,7 % случайных наборов
+  const bad = swapAt(LEGACY_118, 39, 'A');
+  assert.notEqual(bad, LEGACY_118);
+  assert.ok(inflated(bad).equals(inflated(LEGACY_118)), 'после распаковки байты те же');
+  assert.deepEqual(modcode.unpack(bad), modcode.unpack(LEGACY_118));
+  assert.deepEqual(modcode.unpack(LEGACY_118), { ...HOST, ids: [...IDS_118].sort(), others: [] });
+});
+
+test('порча одного знака, меняющая данные: сумма zlib (Adler-32) её не видит, сумма кода h — видит', (t) => {
+  const { modcode } = setup(t);
+  // Найденные случаи в настоящих кодах 0.10.2 (без h): распаковка проходит, но данные уже другие — поэтому в код добавлена сумма h
+  const ids7 = modcode.unpack(swapAt(LEGACY_7, 234, 'x')).ids;
+  assert.ok(ids7.includes('gY41g4Ri') && !ids7.includes('gY41g4Re'), 'id «…4ReitPJ…» → «…4RiaxPJ…»: +4, −8, +4 у соседних байтов, Adler-32 не меняется');
+  const others42 = modcode.unpack(swapAt(LEGACY_42, 23, 'F')).others.map((o) => o.hash);
+  assert.deepEqual(others42, ['0123456879abcdef', 'fedcba9786543210'], 'в таблице Хаффмана поменялись коды цифр 7 и 8');
+  // Те же наборы новым кодом: любая замена любого знака тела на любой знак base64 либо отвергается как повреждение,
+  // либо даёт ровно те же данные (другая запись того же). Тихой подмены данных нет
+  const B64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+  for (const set of SETS) {
+    const code = modcode.pack(set.data);
+    const ref = JSON.stringify(modcode.unpack(code));
+    const body = code.slice(bodyAt(code));
+    let rejected = 0;
+    let same = 0;
+    for (let i = 0; i < body.length; i++) {
+      for (const ch of B64) {
+        if (ch === body[i]) continue;
+        let got;
+        try {
+          got = JSON.stringify(modcode.unpack(swapAt(code, i, ch)));
+        } catch (e) {
+          assert.equal(e.code, 'corrupt', `${set.name}: знак ${i} → ${ch}: ${e.message}`);
+          rejected++;
+          continue;
+        }
+        assert.equal(got, ref, `${set.name}: знак ${i} → ${ch} тихо изменил данные`);
+        same++;
+      }
+    }
+    assert.ok(rejected > 50 * same, `${set.name}: отвергнуто ${rejected}, та же запись ${same}`);
+  }
+});
+
+test('сумма кода: старые коды без неё читаются как раньше, новые с ней — те же данные; неверная сумма — повреждение', (t) => {
+  const { modcode } = setup(t);
+  for (const set of SETS) {
+    const expected = { ...set.data, ids: [...set.data.ids].sort(), others: [...set.data.others].sort((a, b) => (a.name < b.name ? -1 : 1)) };
+    assert.deepEqual(modcode.unpack(set.legacy), expected, `${set.name}: код 0.10.2`);
+    const code = modcode.pack(set.data);
+    assert.deepEqual(modcode.unpack(code), expected, `${set.name}: новый код`);
+    const json = JSON.parse(inflated(code).toString('utf8'));
+    assert.match(json.h, /^[0-9a-f]{12}$/);
+    // лаунчер 0.10.2 читает новые коды: его разбор пропускает незнакомые поля (проверено в «разбор: только допустимое содержимое»)
+    assert.throws(() => modcode.unpack(rawCode({ ...json, h: '000000000000' })), (e) => e.code === 'corrupt', `${set.name}: чужая сумма`);
+    assert.throws(() => modcode.unpack(rawCode({ ...json, h: 12345 })), (e) => e.code === 'corrupt', `${set.name}: сумма не строкой`);
+    assert.throws(() => modcode.unpack(rawCode({ ...json, m: json.m.replace(/^./, (c) => (c === 'A' ? 'B' : 'A')) })), (e) => e.code === 'corrupt', `${set.name}: id изменён, сумма прежняя`);
+    // сумма не зависит от порядка ключей в JSON
+    const { h, ...rest } = json;
+    assert.deepEqual(modcode.unpack(rawCode({ h, ...Object.fromEntries(Object.entries(rest).reverse()) })), expected);
+  }
 });
 
 test('вставленное сообщение друга: адрес и код находятся в любом тексте, код переживает переносы, кавычки и чужие слова вокруг', (t) => {
@@ -259,7 +348,9 @@ test('код своей сборки: id версий Modrinth по хэшам �
   assert.deepEqual([...api()[0].body.hashes].sort(), [a.sha1, b.sha1, sha1('мой собственный мод')].sort(), 'выключенный мод и не-jar в запрос не попали');
   // в коде только то, что нужно для сверки: ни названия сборки, ни путей, ни аккаунтов
   const raw = zlib.inflateSync(Buffer.from(r.code.replace(/^FLM1:\d+:/, ''), 'base64')).toString('utf8');
-  assert.deepEqual(Object.keys(JSON.parse(raw)).sort(), ['l', 'lv', 'm', 'mc', 'o', 'v']);
+  // h — сумма содержимого (12 шестнадцатеричных знаков SHA-256), не данные человека
+  assert.deepEqual(Object.keys(JSON.parse(raw)).sort(), ['h', 'l', 'lv', 'm', 'mc', 'o', 'v']);
+  assert.match(JSON.parse(raw).h, /^[0-9a-f]{12}$/);
   assert.ok(!raw.includes('Секретное') && !raw.includes(p.dir) && !raw.includes(path.basename(p.dir)) && !/Users|AppData/.test(raw), raw);
 });
 

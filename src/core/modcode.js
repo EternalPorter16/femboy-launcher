@@ -1,10 +1,15 @@
 // «Код сборки»: короткий текст со списком модов хозяина. Друг вставляет его вместе с адресом мира, лаунчер сверяет моды со сборкой
 // гостя, ставит точные версии с Modrinth (с проверкой хэша) и заходит на адрес. В код попадает только то, что нужно для сверки:
 // версия игры, загрузчик, id версий Modrinth и, для модов не оттуда, имя файла с началом отпечатка. Ни путей, ни названия сборки, ни аккаунтов.
-// Формат: FLM1:<число знаков>:<zlib(JSON) в base64>. Длина в заголовке нужна, чтобы найти конец кода в сообщении и заметить, что его обрезали
+// Формат: FLM1:<число знаков>:<zlib(JSON) в base64>. Длина в заголовке нужна, чтобы найти конец кода в сообщении и заметить, что его обрезали.
+// Целостность: поле h в JSON — начало SHA-256 содержимого. Своей суммы zlib (Adler-32) мало: на коротких данных она слепа к части
+// изменений (например, +d/−2d/+d у соседних байтов или обмен кодов двух символов в таблице Хаффмана), и испорченный при копировании
+// код мог распаковаться в другие id модов. Коды без h (от лаунчеров до этой правки) принимаются как раньше; старые лаунчеры
+// поле h просто не читают, поэтому версия формата та же
 const fs = require('fs');
 const path = require('path');
 const zlib = require('zlib');
+const crypto = require('crypto');
 const instances = require('./instances');
 const mods = require('./mods');
 const { sha1File } = require('./origins');
@@ -90,12 +95,17 @@ function normalize(d) {
   return { mc: d.mc, loader: d.l, loaderVersion: d.lv ?? null, ids: [...new Set(ids)].sort(), others };
 }
 
+// Сумма содержимого кода: зависит только от значений полей, а не от порядка ключей в JSON
+const HASH_LEN = 12; // 48 бит SHA-256
+const digest = (d) => crypto.createHash('sha256').update(JSON.stringify([d.v, d.mc, d.l, d.lv ?? null, d.m ?? '', d.o ?? []])).digest('hex').slice(0, HASH_LEN);
+
 // { mc, loader, loaderVersion, ids, others: [{ name, hash }] } → строка кода. Порядок файлов в папке на результат не влияет
 function pack({ mc, loader, loaderVersion, ids, others }) {
   const ordered = [...new Set(ids)].sort();
   if (!ordered.every((i) => ID_RE.test(i))) throw fail('bad', 'Некорректный id версии');
   const sorted = [...others].sort((a, b) => byName(a.name, b.name));
   const data = { v: VERSION, mc, l: loader, ...(loaderVersion ? { lv: loaderVersion } : {}), m: ordered.join(''), ...(sorted.length ? { o: sorted.map((o) => [o.name, o.hash]) } : {}) };
+  data.h = digest(data);
   normalize(JSON.parse(JSON.stringify(data))); // то, что не принял бы разбор, не выпускаем
   const body = zlib.deflateSync(Buffer.from(JSON.stringify(data)), { level: 9 }).toString('base64').replace(/=+$/, '');
   return `FLM${VERSION}:${body.length}:${body}`;
@@ -130,6 +140,8 @@ function unpack(text) {
   } catch {
     throw fail('bad', 'В коде сборки что-то не так (содержимое) — попроси друга скопировать его заново');
   }
+  // Есть сумма — содержимое обязано ей соответствовать: иначе код испорчен, хотя zlib его и распаковал. Нет суммы — код старого лаунчера
+  if (data && typeof data === 'object' && !Array.isArray(data) && Object.hasOwn(data, 'h') && (typeof data.h !== 'string' || data.h !== digest(data))) throw fail('corrupt', CORRUPT);
   return normalize(data);
 }
 

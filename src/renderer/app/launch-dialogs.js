@@ -113,6 +113,29 @@ async function paintGfx(inst, host) {
 }
 
 // Вопрос про мощную видеокарту. Закрывается любым ответом, запоминает, что уже спрашивали
+// Синхронизация перед запуском не удалась: показываем причину и спрашиваем, запускать ли без неё. Закрытие окна = не запускать
+function syncFailDialog(reason) {
+  return new Promise((resolve) => {
+    let go = false;
+    const box = openModal(`
+      <div class="crash-head"><div class="empty-cat" data-cat></div><div><h2>Синхронизация не удалась</h2><p class="sub">Игру не запускаю, чтобы версии сборки не разошлись</p></div></div>
+      <p class="hint">${esc(reason)}</p>
+      <p class="hint">Если запустить без синхронизации, на этом компьютере сборка может оказаться старее, чем на другом. При следующей синхронизации лаунчер сохранит обе версии рядом, ничего не потеряется.</p>
+      <div class="modal-actions wrap">
+        <button class="btn ghost" id="sfNo">Не запускать</button>
+        <button class="btn soft" id="sfYes">Запустить без синхронизации</button>
+      </div>`);
+    box.dispose = () => resolve(go);
+    $('#sfNo', box).onclick = () => closeModal();
+    $('#sfYes', box).onclick = () => {
+      go = true;
+      box.dispose = null;
+      resolve(true);
+      closeModal();
+    };
+  });
+}
+
 function gpuDialog(g) {
   return new Promise((resolve) => {
     let decided = false;

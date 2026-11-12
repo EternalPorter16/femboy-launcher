@@ -1,4 +1,4 @@
-# Reserve channel: pushes the project to GitHub and publishes the release (installers + notes) there.
+# Reserve channel: uploads verified installers only. Never stage, commit or push source files.
 # The main channels (Cloud, own domain, Yandex.Disk) stay the source of updates; this step runs AFTER them
 # and a failure here never cancels a release (release.bat only prints a warning).
 # The token is stored encrypted for this Windows user (build\setup-github-token.ps1); it is never printed.
@@ -10,6 +10,7 @@ $ProgressPreference = 'SilentlyContinue'
 $root = Split-Path $PSScriptRoot
 $pkg = Get-Content "$root\package.json" -Raw -Encoding UTF8 | ConvertFrom-Json
 $v = $pkg.version
+if ($v -notmatch '^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$') { throw 'Invalid release version' }
 $tag = "v$v"
 $slug = $pkg.updates.github
 if (-not $slug -or $slug -notmatch '^[\w.-]+/[\w.-]+$') { throw 'package.json: updates.github must look like owner/repo' }
@@ -28,6 +29,7 @@ if ($DryRun) {
   Write-Host "GitHub dry run: repo $slug, tag $tag"
   foreach ($f in $files) { Write-Host ("  asset {0} ({1} bytes)" -f $f, (Get-Item "$root\$Out\$f").Length) }
   Write-Host "  description: $($body.Length) characters"
+  Write-Host '  Plan only: source provenance and remote checks are required for a real upload.'
   exit 0
 }
 
@@ -36,51 +38,59 @@ if (-not (Test-Path $tokenFile)) {
   Write-Host 'GitHub reserve step skipped: no token saved. To enable it run: powershell -File build\setup-github-token.ps1'
   exit 0
 }
+$recordText = & node "$PSScriptRoot\release-build.js" --verify $Out
+if ($LASTEXITCODE -ne 0) { throw 'Release provenance verification failed; rebuild from a reviewed clean commit' }
+$record = $recordText | ConvertFrom-Json
+$commit = $record.commit
 $token = (Import-Clixml -LiteralPath $tokenFile).GetNetworkCredential().Password
 $headers = @{ Authorization = "Bearer $token"; 'X-GitHub-Api-Version' = '2022-11-28'; 'User-Agent' = 'femboy-launcher-release'; Accept = 'application/vnd.github+json' }
 $api = "https://api.github.com/repos/$slug"
 
-# 1. Source code: commit what changed in this release and push (history stays linear, nothing is force-pushed)
-if (Test-Path "$root\.git") {
-  Push-Location $root
-  try {
-    & git add -A
-    & git diff --cached --quiet
-    if ($LASTEXITCODE -ne 0) {
-      & git commit -q -m "Release $tag"
-      if ($LASTEXITCODE -ne 0) { throw 'git commit failed' }
-      Write-Host "Committed changes as: Release $tag"
-    } else { Write-Host 'No source changes to commit.' }
-    & git push origin main
-    if ($LASTEXITCODE -ne 0) { throw 'git push failed (sign in to GitHub in Git Credential Manager and run again)' }
-  } finally { Pop-Location }
-} else { Write-Host 'No git repository here: source push skipped.' }
+# 1. The reviewed source must already be public. All calls before release creation are read-only.
+$remoteCommit = Invoke-RestMethod "$api/commits/$commit" -Headers $headers -TimeoutSec 60
+if ($remoteCommit.sha -ne $commit) { throw 'Source commit is not available in the public repository' }
+$ref = $null
+try { $ref = Invoke-RestMethod "$api/git/ref/tags/$tag" -Headers $headers -TimeoutSec 60 } catch {
+  if ($_.Exception.Response.StatusCode.value__ -ne 404) { throw }
+}
+if ($ref) {
+  $object = $ref.object
+  for ($depth = 0; $object.type -eq 'tag' -and $depth -lt 8; $depth++) {
+    $object = (Invoke-RestMethod "$api/git/tags/$($object.sha)" -Headers $headers -TimeoutSec 60).object
+  }
+  if ($object.type -ne 'commit' -or $object.sha -ne $commit) { throw 'Existing release tag points to different sources; use a new version' }
+}
 
 # 2. Release: create it, or refresh the description of an existing one
 $release = $null
-try { $release = Invoke-RestMethod "$api/releases/tags/$tag" -Headers $headers } catch {
+try { $release = Invoke-RestMethod "$api/releases/tags/$tag" -Headers $headers -TimeoutSec 60 } catch {
   if ($_.Exception.Response.StatusCode.value__ -ne 404) { throw }
 }
 if (-not $release) {
-  $payload = @{ tag_name = $tag; target_commitish = 'main'; name = "Femboy Launcher $v"; body = $body; draft = $false; prerelease = $false } | ConvertTo-Json
-  $release = Invoke-RestMethod "$api/releases" -Method Post -Headers $headers -ContentType 'application/json; charset=utf-8' -Body ([Text.Encoding]::UTF8.GetBytes($payload))
+  $payload = @{ tag_name = $tag; target_commitish = $commit; name = "Femboy Launcher $v"; body = $body; draft = $false; prerelease = $false } | ConvertTo-Json
+  $release = Invoke-RestMethod "$api/releases" -Method Post -Headers $headers -TimeoutSec 60 -ContentType 'application/json; charset=utf-8' -Body ([Text.Encoding]::UTF8.GetBytes($payload))
   Write-Host "Created release $tag"
 } else {
   $payload = @{ name = "Femboy Launcher $v"; body = $body } | ConvertTo-Json
-  $release = Invoke-RestMethod "$api/releases/$($release.id)" -Method Patch -Headers $headers -ContentType 'application/json; charset=utf-8' -Body ([Text.Encoding]::UTF8.GetBytes($payload))
+  if (-not $ref) { throw 'Existing release has no verified source tag' }
+  $release = Invoke-RestMethod "$api/releases/$($release.id)" -Method Patch -Headers $headers -TimeoutSec 60 -ContentType 'application/json; charset=utf-8' -Body ([Text.Encoding]::UTF8.GetBytes($payload))
   Write-Host "Updated description of release $tag"
 }
 
-# 3. Installers. A published file of the same name is never replaced: same size = already there, different = warning
-$have = @{}; foreach ($a in $release.assets) { $have[$a.name] = $a.size }
+# 3. Same size alone is not proof of identical content. Never replace a published asset automatically.
+$have = @{}; foreach ($a in $release.assets) { $have[$a.name] = $a }
 $upload = ($release.upload_url -replace '\{.*$', '')
 foreach ($f in $files) {
   $path = "$root\$Out\$f"; $size = (Get-Item $path).Length
   if ($have.ContainsKey($f)) {
-    if ($have[$f] -eq $size) { Write-Host "  $f is already on GitHub" } else { Write-Host "  WARNING: $f on GitHub differs in size; not replaced" }
+    $expected = 'sha256:' + (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant()
+    if ($have[$f].size -ne $size -or $have[$f].state -ne 'uploaded' -or $have[$f].digest -ne $expected) { throw "Existing asset $f is incomplete or cannot be verified; inspect it before retrying" }
+    Write-Host "  $f is already on GitHub (SHA256 verified)"
     continue
   }
   Write-Host "  uploading $f ($([math]::Round($size / 1MB)) MB)..."
-  Invoke-RestMethod ($upload + '?name=' + [uri]::EscapeDataString($f)) -Method Post -Headers $headers -ContentType 'application/octet-stream' -InFile $path | Out-Null
+  $uploaded = Invoke-RestMethod ($upload + '?name=' + [uri]::EscapeDataString($f)) -Method Post -Headers $headers -TimeoutSec 300 -ContentType 'application/octet-stream' -InFile $path
+  $expected = 'sha256:' + (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant()
+  if ($uploaded.size -ne $size -or $uploaded.state -ne 'uploaded' -or $uploaded.digest -ne $expected) { throw "Uploaded asset $f failed integrity verification" }
 }
 Write-Host "GitHub reserve is ready: $($release.html_url)"

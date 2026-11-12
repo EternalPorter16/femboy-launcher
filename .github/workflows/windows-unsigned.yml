@@ -1,0 +1,50 @@
+name: Windows unsigned build (signing preparation)
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: windows-unsigned-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  build:
+    if: github.repository == 'EternalPorter16/femboy-launcher' && github.ref == 'refs/heads/main'
+    runs-on: windows-latest
+    timeout-minutes: 30
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4, verified 2026-11-11
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24'
+      - run: npm ci
+      - run: npm test
+      - run: npm run test:electron-node
+      - name: Build unsigned files; never publish
+        run: npx --no-install electron-builder --win --publish never
+      - name: Record source and unsigned file hashes
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          $names = @("FemboyLauncher-Setup-$version.exe", "FemboyLauncher-Portable-$version.exe")
+          $files = foreach ($name in $names) {
+            $file = Get-Item -LiteralPath (Join-Path dist $name)
+            $signature = Get-AuthenticodeSignature -LiteralPath $file.FullName
+            if ($signature.Status -ne 'NotSigned') { throw 'Expected unsigned preparation artifact' }
+            @{ name = $name; size = $file.Length; sha256 = (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash.ToLowerInvariant() }
+          }
+          $record = @{ schema = 1; signed = $false; version = $version; commit = $env:GITHUB_SHA; repository = $env:GITHUB_REPOSITORY; runId = $env:GITHUB_RUN_ID; runAttempt = $env:GITHUB_RUN_ATTEMPT; lockSha256 = (Get-FileHash package-lock.json -Algorithm SHA256).Hash.ToLowerInvariant(); files = @($files) }
+          $record | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath dist/unsigned-provenance.json -Encoding utf8
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: unsigned-windows-${{ github.sha }}
+          path: |
+            dist/FemboyLauncher-Setup-*.exe
+            dist/FemboyLauncher-Portable-*.exe
+            dist/unsigned-provenance.json
+          if-no-files-found: error
+          retention-days: 7

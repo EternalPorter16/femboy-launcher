@@ -65,7 +65,7 @@ async function cancelOps() {
 $('#pbCancel').onclick = cancelOps;
 
 // friends: игру запускают из окна «Играть с другом» — только тогда отмеченные друзья записываются в белый список (на один мир, потом он очищается)
-async function play({ server, world, skipHealth = false, bisect = false, friends = false } = {}) {
+async function play({ server, world, skipHealth = false, bisect = false, friends = false, skipSync = false } = {}) {
   const inst = selectedInstance();
   if (!inst) {
     toast('Сначала создай сборку ♡', 'err');
@@ -99,10 +99,18 @@ async function play({ server, world, skipHealth = false, bisect = false, friends
   setProgress('Готовлюсь…', null);
   say(server ? `захожу на ${server}… 😳` : world ? 'захожу в мир… 😳' : 'запускаю… 😳');
   log(`♡ Запуск «${inst.name}» (${inst.version}${inst.loader !== 'vanilla' ? ', ' + LOADERS[inst.loader] : ''}) как ${activeAccount().name}${server ? ' → ' + server : ''}${world ? ` → мир «${world}»` : ''}`, 'info');
+  let retryWithoutSync = false;
   try {
-    await call('game:launch', inst.id, { server, world, friends });
+    await call('game:launch', inst.id, { server, world, friends, skipSync });
   } catch (err) {
-    if (err.cancelled) {
+    if (err.syncFailed) {
+      // Синхронизация не удалась: игра не запущена. Причину и выбор показываем в окне; без выбора запуска нет
+      log(`Синхронизация: ${err.message}`, 'error');
+      hideProgress();
+      retryWithoutSync = await syncFailDialog(err.message);
+      if (!retryWithoutSync) say('хорошо, не запускаю ♡');
+      refresh().catch(() => {});
+    } else if (err.cancelled) {
       log('Запуск отменён', 'info');
       toast('Запуск отменён');
       say('хорошо, не запускаю ♡');
@@ -116,6 +124,7 @@ async function play({ server, world, skipHealth = false, bisect = false, friends
     hideProgress();
     renderFooter();
   }
+  if (retryWithoutSync) return play({ server, world, skipHealth: true, bisect, friends, skipSync: true });
 }
 $('#playBtn').onclick = () => play();
 

@@ -105,7 +105,7 @@ async function backup(id, name, { auto = false } = {}) {
         callback(null, input);
       });
     }
-    zip.end();
+    zip.end({ comment: Buffer.from(JSON.stringify({ format: 'femboy-world-backup', version: 1, world: name, auto: !!auto }), 'utf8') });
     await writing;
     await closeInputs();
     if (fs.existsSync(file)) throw new Error('Копия с таким именем уже существует');
@@ -132,6 +132,43 @@ function remove(id, name) {
 /* ---------- копии миров: список, восстановление, автокопии ---------- */
 const BACKUP_RE = /^(.+?)(-auto)?-(\d{4}-\d{2}-\d{2}-\d{2}-\d{2}(?:-\d{2})?)\.zip$/;
 
+// Read only a bounded header/tail: listing backups must not load or inflate ZIPs.
+function backupIdentity(file, match) {
+  const fullName = match[1] + (match[2] || '');
+  const manual = { world: fullName, auto: false };
+  let fd;
+  try {
+    fd = fs.openSync(file, 'r');
+    const size = fs.fstatSync(fd).size;
+    const tail = Buffer.alloc(Math.min(size, 65557));
+    fs.readSync(fd, tail, 0, tail.length, size - tail.length);
+    for (let i = tail.length - 22; i >= 0; i--) {
+      if (tail.readUInt32LE(i) !== 0x06054b50 || i + 22 + tail.readUInt16LE(i + 20) !== tail.length) continue;
+      const length = tail.readUInt16LE(i + 20);
+      if (length > 0 && length <= 8192) {
+        try {
+          const meta = JSON.parse(tail.subarray(i + 22).toString('utf8'));
+          if (meta.format === 'femboy-world-backup' && meta.version === 1 && typeof meta.world === 'string' && typeof meta.auto === 'boolean' &&
+              meta.world && !meta.world.startsWith('.') && !/[\\/:]/.test(meta.world) && meta.world + (meta.auto ? '-auto' : '') === fullName) return { world: meta.world, auto: meta.auto };
+        } catch {}
+      }
+      break;
+    }
+    // Legacy ZIPs have no identity comment. A manual Foo-auto archive contains
+    // Foo-auto/...; an automatic Foo archive contains Foo/... . Do not infer
+    // deletion eligibility from the filename alone if that evidence is absent.
+    const header = Buffer.alloc(30);
+    if (fs.readSync(fd, header, 0, 30, 0) !== 30 || header.readUInt32LE(0) !== 0x04034b50) return manual;
+    const length = header.readUInt16LE(26);
+    const name = Buffer.alloc(length);
+    if (!length || fs.readSync(fd, name, 0, length, 30) !== length) return manual;
+    const root = name.toString('utf8').replace(/\\/g, '/').split('/')[0];
+    if (root === fullName) return manual;
+    if (match[2] && root === match[1]) return { world: root, auto: true };
+  } catch {} finally { if (fd !== undefined) fs.closeSync(fd); }
+  return manual;
+}
+
 function backups(id) {
   const dir = path.join(instances.dirOf(id), 'backups');
   if (!fs.existsSync(dir)) return [];
@@ -140,8 +177,10 @@ function backups(id) {
     .map((file) => {
       const m = BACKUP_RE.exec(file);
       if (!m) return null;
-      const st = fs.statSync(path.join(dir, file));
-      return { file, world: m[1], auto: !!m[2], size: st.size, time: st.mtimeMs };
+      const p = path.join(dir, file);
+      const st = fs.lstatSync(p);
+      if (!st.isFile()) return null;
+      return { file, ...backupIdentity(p, m), size: st.size, time: st.mtimeMs };
     })
     .filter(Boolean)
     .sort((a, b) => b.time - a.time);
@@ -156,18 +195,49 @@ function restore(id, file) {
   const when = new Date(b.time).toLocaleString('ru-RU', { day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit' }).replace(/[:/\\]/g, '.');
   let name = `${b.world} (копия от ${when})`;
   for (let n = 2; fs.existsSync(path.join(savesDir(id), name)); n++) name = `${b.world} (копия от ${when}, ${n})`;
-  const dest = path.join(savesDir(id), name);
-  const AdmZip = require('adm-zip');
-  const zip = new AdmZip(zipFile);
-  for (const e of zip.getEntries()) {
-    if (e.isDirectory) continue;
-    const rel = e.entryName.replace(/\\/g, '/').split('/').slice(1).join('/'); // внутри архива всё лежит в папке с именем мира
-    const out = path.resolve(dest, rel);
-    if (!rel || !out.startsWith(dest + path.sep)) continue;
-    fs.mkdirSync(path.dirname(out), { recursive: true });
-    fs.writeFileSync(out, e.getData());
+  // Копия может быть подделана или повреждена: пределы и методы сжатия проверяем по заголовкам до любой записи
+  const archive = require('./archive'), AdmZip = require('adm-zip');
+  if (fs.statSync(zipFile).size > archive.WORLD_LIMITS.archiveBytes) throw new Error('Копия мира слишком большая');
+  const zip = archive.inspect(new AdmZip(zipFile), archive.WORLD_LIMITS);
+  const need = zip.getEntries().reduce((sum, e) => sum + (e.isDirectory ? 0 : e.header.size), 0);
+  require('./diskspace').ensureSync(path.join(instances.gameDir(id), '.cache'), need);
+  // Keep staging on the game's volume and inside the already excluded cache
+  // tree, so folder sync cannot export a half-restored world.
+  const work = path.join(instances.gameDir(id), '.cache', '.world-restore');
+  fs.mkdirSync(work, { recursive: true });
+  const staging = fs.mkdtempSync(path.join(work, 'restore-'));
+  try {
+    let root;
+    for (const e of zip.getEntries()) {
+      const parts = e.entryName.replace(/\\/g, '/').split('/');
+      const entryRoot = parts.shift();
+      if (!entryRoot || entryRoot === '.' || entryRoot === '..' || /:/.test(entryRoot)) throw new Error('Некорректное имя мира');
+      if (root && root !== entryRoot) throw new Error('Некорректное имя мира');
+      root = entryRoot;
+      if (e.isDirectory) continue;
+      if (parts.some((p) => !p || p === '.' || p === '..' || /[:<>"|?*\x00-\x1f]/.test(p) || /[. ]$/.test(p) || /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(p))) throw new Error('Некорректное имя мира');
+      const rel = parts.join('/'), out = path.resolve(staging, rel);
+      if (!rel || !out.startsWith(staging + path.sep)) throw new Error('Некорректное имя мира');
+      if (rel === 'session.lock') continue;
+      fs.mkdirSync(path.dirname(out), { recursive: true });
+      fs.writeFileSync(out, e.getData(), { flag: 'wx' });
+    }
+    if (!fs.statSync(path.join(staging, 'level.dat'), { throwIfNoEntry: false })?.isFile()) throw new Error('Мир не найден');
+    fs.mkdirSync(savesDir(id), { recursive: true });
+    // Publish only after all reads/writes succeeded. A terminated process can
+    // leave staging material, but never a normal-looking half-restored world.
+    for (let n = 2; ; n++) {
+      const dest = path.join(savesDir(id), name);
+      if (!fs.existsSync(dest)) {
+        try { fs.renameSync(staging, dest); break; }
+        catch (e) { if (!['EEXIST', 'ENOTEMPTY'].includes(e.code)) throw e; }
+      }
+      name = `${b.world} (копия от ${when}, ${n})`;
+    }
+    return name;
+  } finally {
+    fs.rmSync(staging, { recursive: true, force: true });
   }
-  return name;
 }
 
 // После игры: копии миров, в которые играли в этот раз. mode: 'session' — каждый раз, 'daily' — не чаще раза в сутки

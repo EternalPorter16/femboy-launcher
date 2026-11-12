@@ -23,8 +23,8 @@ const enc = encodeURIComponent;
 
 // Что не переносим в копию. Моды заводим заново, логи и кэши загрузчика привязаны к старой версии игры,
 // а списки файлов модпака и источников модов относятся только к старой сборке
-const SKIP_ROOT = new Set(['instance.json', 'mods-meta.json', 'origins.json', 'pack-files.json', 'migration.json', 'bisect.json', 'backups']);
-const SKIP_GAME = new Set(['mods', 'logs', 'crash-reports', '.fabric', '.mixin.out', 'debug']);
+const SKIP_ROOT = new Set(['instance.json', 'mods-meta.json', 'origins.json', 'pack-files.json', 'migration.json', 'bisect.json', 'backups', '.pack-update', '.world-restore']);
+const SKIP_GAME = new Set(['mods', 'logs', 'crash-reports', '.cache', '.fabric', '.mixin.out', 'debug']);
 
 function sha1File(file) {
   return new Promise((resolve, reject) => {
@@ -358,6 +358,7 @@ function checkSpace(instId, withWorlds) {
 
 // Создаёт копию сборки на версии target. progress(подпись, процент|null). При отмене или сбое копия удаляется целиком
 async function run(instId, target, { worlds: withWorlds = true } = {}, progress = () => {}) {
+  if (fs.existsSync(path.join(instances.dirOf(instId), '.pack-update'))) throw new Error('Сначала заверши или восстанови обновление модпака');
   const inst = instances.get(instId);
   progress(`Смотрю, что есть под ${target}…`, null);
   await checkTarget(inst, target);

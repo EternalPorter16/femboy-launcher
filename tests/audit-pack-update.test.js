@@ -133,9 +133,9 @@ test('committed update keeps new files and does not damage a hardlinked snapshot
 test('failed cleanup after commit is resolved without rolling back a successful update', (t) => {
   const f = setup(t);
   let failCleanup = true;
-  const transaction = f.load('packupdate', { fs: { ...fs, rmSync(dest, opts) {
-    if (failCleanup && dest === path.join(f.dir, '.pack-update')) { failCleanup = false; throw new Error('busy cleanup'); }
-    return fs.rmSync(dest, opts);
+  const transaction = f.load('packupdate', { './fsx': { ...fsx, renameRetry(from, to) {
+    if (failCleanup && from === path.join(f.dir, '.pack-update')) { failCleanup = false; throw new Error('busy cleanup'); }
+    return fsx.renameRetry(from, to);
   } } });
   const tx = prepare(f, transaction);
   tx.commit(['mods/old.jar']);
@@ -173,7 +173,7 @@ test('required pre-update snapshot failure prevents calling the updater', async 
   const busy = new Set();
   vm.runInNewContext(auto + '\n' + handler, {
     snapshots: { create: (_id, _reason, options) => { assert.equal(options.force, true); throw new Error('snapshot failure'); } }, send() {},
-    handle: (_, fn) => { run = fn; }, game: { isRunning: () => false }, launches: new Map(), packUpdates: busy,
+    handle: (_, fn) => { run = fn; }, game: { isRunning: () => false }, launches: new Map(), packUpdates: busy, modInstalls: new Set(),
     packupdate: { recover() {} }, lifecycle: { idle() {} }, instances: { get: () => ({ pack: { projectId: 'fixture', source: 'modrinth' } }) },
     withTask: async (fn) => fn(() => {}), source: () => ({ updateModpack: () => { updates++; } }),
   });
@@ -185,15 +185,19 @@ test('required pre-update snapshot failure prevents calling the updater', async 
 test('game launch waits for pack updates and recovers before syncing or launching', async () => {
   const source = fs.readFileSync(path.join(__dirname, '../src/main.js'), 'utf8');
   const prefix = source.slice(source.indexOf('async function launchGame'), source.indexOf('  let startedAt = Date.now();', source.indexOf('async function launchGame')));
-  const events = [], busy = new Set(['test']);
+  const events = [], busy = new Set(['test']), installing = new Set();
   const launch = vm.runInNewContext('(' + prefix + '})', {
-    packUpdates: busy, packupdate: { recover: () => events.push('recover') },
+    packUpdates: busy, modInstalls: installing, cloudPublishes: new Set(), packupdate: { recover: () => events.push('recover') },
     store: { get: () => ({ settings: { syncDir: 'fixture' } }) }, game: { isRunning: () => false }, launchProgress() {},
     sync: { syncInstance: async () => events.push('sync') }, send() {},
   });
   await assert.rejects(launch('test', {}), /дождись обновления/);
   assert.deepEqual(events, []);
   busy.clear();
+  installing.add('test');
+  await assert.rejects(launch('test', {}), /дождись завершения/);
+  assert.deepEqual(events, []);
+  installing.clear();
   await launch('test', {});
   assert.deepEqual(events, ['recover', 'sync']);
 });

@@ -78,7 +78,7 @@ async function exportMrpack(instId, outFile, progress = () => {}) {
 // Импорт: .mrpack / zip CurseForge / zip или папка Prism-MultiMC
 async function importPath(p, progress = () => {}) {
   if (fs.statSync(p).isDirectory()) return importPrism(p, progress);
-  const zip = new AdmZip(p);
+  const zip = require('./archive').open(p);
   if (zip.getEntry('modrinth.index.json')) return modrinth.installModpackFile(p, progress);
   if (zip.getEntry('manifest.json')) return curseforge.installModpackFile(p, progress);
   const cfg = zip.getEntries().find((e) => /(^|\/)mmc-pack\.json$/.test(e.entryName));

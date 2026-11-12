@@ -3,7 +3,11 @@
 $ErrorActionPreference = 'Stop'
 try {
     Add-Type -AssemblyName System.Windows.Forms
-    $credential = Get-Credential -UserName 'bartawesom' -Message 'SpaceWeb: enter the FTP account login and password locally. Do not send the password in chat.'
+    $login = ''
+    $localConfig = Join-Path $PSScriptRoot 'website-hosting.local.json'
+    if (Test-Path -LiteralPath $localConfig) { try { $login = [string](Get-Content -LiteralPath $localConfig -Raw | ConvertFrom-Json).login } catch { $login = '' } }
+    $message = 'SpaceWeb: enter the FTP account login and password locally. Do not send the password in chat.'
+    $credential = if ($login) { Get-Credential -UserName $login -Message $message } else { Get-Credential -Message $message }
     if ($null -eq $credential) { exit }
     if ([string]::IsNullOrWhiteSpace($credential.UserName) -or $credential.Password.Length -eq 0) {
         throw 'Login and password are required.'

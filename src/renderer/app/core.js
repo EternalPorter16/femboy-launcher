@@ -44,7 +44,7 @@ const state = {
 
 async function call(channel, ...args) {
   const r = await api.invoke(channel, ...args);
-  if (!r.ok) throw Object.assign(new Error(r.error), r.cancelled && { cancelled: true }, r.needs2fa && { needs2fa: true });
+  if (!r.ok) throw Object.assign(new Error(r.error), r.cancelled && { cancelled: true }, r.needs2fa && { needs2fa: true }, r.syncFailed && { syncFailed: true });
   return r.data;
 }
 

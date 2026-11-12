@@ -217,6 +217,9 @@ test('аватарка из скина Ely.by сохраняется, а есл�
 test('JVM-аргументы: агент с адресом API и настройками внутри; настройки лежат на диске и переживают отсутствие связи', async (t) => {
   const { srv, p, ely } = await setup(t);
   fs.writeFileSync(path.join(p.dir, 'authlib-injector.jar'), 'fake jar'); // скачивать агент в тесте незачем
+  // This test checks JVM arguments, not injector trust; do not make production
+  // verification accept a fake cache just to avoid a network download here.
+  p.load('core/yggdrasil').ensureInjector = async () => path.join(p.dir, 'authlib-injector.jar');
   const args = await ely.jvmArgs();
   const jar = path.join(p.dir, 'authlib-injector.jar');
   assert.equal(args[0], `-javaagent:${jar}=${srv.url}/api/authlib-injector`);

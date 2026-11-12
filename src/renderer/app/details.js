@@ -188,6 +188,7 @@ function packBlock(inst) {
 
 function renderMore(inst, body) {
   body.innerHTML = `
+    <div id="updateRecovery"></div>
     ${packBlock(inst)}
     <div class="det-actions">
       <button class="btn primary with-ico" data-m="export"><svg class="bi"><use href="#i-import"/></svg>Экспорт в .mrpack</button>
@@ -212,10 +213,25 @@ function renderMore(inst, body) {
     <div class="gfx" id="gfxBlock"></div>
     <p class="hint">Экспорт: моды с Modrinth попадут в файл ссылками (он будет лёгким), остальные — внутрь. Миры в экспорт не входят. «Поделиться» сразу копирует файл — вставь его в чат Discord или Telegram, а друг просто перетащит его в лаунчер.</p>`;
   paintGfx(inst, $('#gfxBlock', body));
+  const recoveryPanel = $('#updateRecovery', body);
+  call('packs:recoveryStatus', inst.id).then((r) => {
+    if (!recoveryPanel.isConnected || !body.contains(recoveryPanel) || !r?.pending) return;
+    recoveryPanel.innerHTML = `<div class="hint"><b>Прерванное обновление</b><p>${esc(r.busy ? 'Обновление ещё выполняется' : r.canRecover ? 'Можно проверить резервные файлы и завершить восстановление' : r.reason)}</p>
+      ${r.canRecover ? '<button class="btn soft" data-m="recoverupdate">Проверить и восстановить</button>' : ''}
+      ${!r.busy ? '<button class="btn ghost" data-m="recoveryfiles">Показать резервные файлы</button>' : ''}</div>`;
+  }).catch(() => { if (recoveryPanel.isConnected) recoveryPanel.textContent = 'Не удалось проверить восстановление обновления'; });
   body.onclick = async (e) => {
     const act = e.target.closest('[data-m]')?.dataset.m;
     if (!act) return;
     try {
+      if (act === 'recoverupdate') {
+        e.target.disabled = true;
+        await call('packs:recover', inst.id);
+        await refresh();
+        toast('Восстановление обновления завершено');
+        renderMore(instById(inst.id) || inst, body);
+      }
+      if (act === 'recoveryfiles') await call('packs:recoveryFolder', inst.id);
       if (act === 'packcheck') {
         e.target.disabled = true;
         e.target.textContent = 'Проверяю…';
@@ -300,6 +316,7 @@ function renderMore(inst, body) {
         checkModUpdates();
       }
     } catch (err) {
+      if (act === 'recoverupdate') e.target.disabled = false;
       toast(err.message, 'err');
     }
   };

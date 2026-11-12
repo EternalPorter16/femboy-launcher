@@ -97,7 +97,10 @@ test('автокопии одного мира не копятся: остают
   const dir = path.join(instances.dirOf(inst.id), 'backups');
   fs.mkdirSync(dir, { recursive: true });
   const make = (name, hoursAgo) => {
-    fs.writeFileSync(path.join(dir, name), 'zip');
+    const zip = new AdmZip();
+    const world = name.startsWith('Другой-') ? 'Другой' : 'Мир';
+    zip.addFile(`${world}/level.dat`, Buffer.from('level'));
+    zip.writeZip(path.join(dir, name));
     const when = new Date(Date.now() - hoursAgo * 3600e3);
     fs.utimesSync(path.join(dir, name), when, when);
   };

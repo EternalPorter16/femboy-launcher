@@ -4,15 +4,19 @@
 function renderSync() {
   const s = state.sync || {};
   $('#syncInfo').textContent = s.dir
-    ? `Папка: ${s.dir}. Последняя синхронизация: ${s.at ? fmtDate(s.at) : 'ещё не было'}. Сборки синхронизируются перед игрой и после неё.`
+    ? `Папка: ${s.dir}. Последняя синхронизация: ${s.at ? fmtDate(s.at) : 'ещё не было'}. Сборки синхронизируются перед игрой и после неё.${s.error ? ` Последняя попытка не удалась: ${s.error}` : ''}`
     : 'Выбери папку облака (Яндекс.Диск, OneDrive, Google Drive) — и сборки с мирами будут одинаковыми на всех твоих компьютерах. Аккаунты туда не попадают.';
-  $('#syncNow').disabled = $('#syncOff').disabled = !s.dir;
+  $('#syncNow').disabled = $('#syncOff').disabled = $('#syncRestore').disabled = !s.dir;
 }
 const syncResult = (r) => {
   if (!r) return;
   if (r.errors?.length) toast('Синхронизация завершилась с ошибками. Проверь сообщения ниже.', 'err');
+  else if (r.conflicts?.length || r.warnings?.length) toast('Синхронизация завершилась с предупреждениями ♡', 'err');
   else toast(`Синхронизировано ♡ Отдано файлов: ${r.up}, получено: ${r.down}`);
   r.errors?.forEach((e) => toast(e, 'err'));
+  r.conflicts?.forEach((e) => toast(e, 'err'));
+  r.warnings?.forEach((e) => toast(e, 'err'));
+  if (r.skipped?.length) toast(`Пропущено (идёт игра): ${r.skipped.join(', ')}`);
 };
 $('#syncPick').onclick = async () => {
   try {
@@ -30,6 +34,51 @@ $('#syncNow').onclick = async () => {
     toast(err.message, 'err');
   }
 };
+// «Восстановить облако с этого компьютера» (sync.publishLocal): выход, если облако застряло на «Облако ещё обновляется»,
+// а другой компьютер не возвращается. Только после подтверждения: состояние выбранной сборки здесь станет облачным, прежняя
+// облачная копия уходит в «Корзину» папки облака. При запущенной игре кнопка подтверждения недоступна; успех — только по ответу
+function restoreCloudDialog() {
+  if (!state.instances.length) return toast('Сначала создай сборку ♡', 'err');
+  const first = [state.sync?.errorId, state.selected].find((id) => id && instById(id)) || state.instances[0].id;
+  const box = openModal(`
+    <div class="crash-head"><div class="empty-cat" data-cat></div><div><h2>Восстановить облако с этого компьютера?</h2><p class="sub">Выход, если облако застряло на «Облако ещё обновляется»</p></div></div>
+    <label class="field"><span>Сборка</span><select id="srInst">${state.instances.map((i) => `<option value="${esc(i.id)}">${esc(i.name)}</option>`).join('')}</select></label>
+    <p class="hint" id="srText"></p>
+    <p class="hint">Изменения, которые другой компьютер ещё не отдал в облако, у него не пропадут: при его следующей синхронизации они уйдут в облако, а если одно и то же изменили оба компьютера, обе версии сохранятся рядом.</p>
+    <p class="hint" id="srBusy" hidden></p>
+    <div class="modal-actions wrap">
+      <button class="btn ghost" id="srNo">Отмена</button>
+      <button class="btn soft" id="srYes">Восстановить облако</button>
+    </div>`);
+  const sel = $('#srInst', box);
+  sel.value = first;
+  const paint = () => {
+    const inst = instById(sel.value);
+    const busy = state.running.has(inst.id) || state.launching.has(inst.id);
+    $('#srText', box).textContent = `Состояние сборки «${inst.name}» на этом компьютере станет новым облачным состоянием. Прежняя облачная копия сохранится в корзине синхронизации: папка «Корзина» в папке облака.`;
+    $('#srBusy', box).textContent = busy ? `Сборка «${inst.name}» сейчас запущена: сначала закрой игру.` : '';
+    $('#srBusy', box).hidden = !busy;
+    $('#srYes', box).disabled = busy;
+  };
+  sel.onchange = paint;
+  paint();
+  $('#srNo', box).onclick = () => closeModal();
+  $('#srYes', box).onclick = async () => {
+    const id = sel.value;
+    if (state.running.has(id) || state.launching.has(id)) return paint();
+    closeModal();
+    try {
+      const r = await call('sync:publishLocal', id);
+      toast(`Облако восстановлено с этого компьютера: «${r.name}» ♡`);
+      [...(r.conflicts || []), ...(r.warnings || [])].forEach((e) => toast(e, 'err'));
+      if (r.all) [...(r.all.errors || []), ...(r.all.conflicts || []), ...(r.all.warnings || [])].forEach((e) => toast(e, 'err'));
+    } catch (err) {
+      toast(err.message, 'err');
+    }
+    await refresh().catch(() => {});
+  };
+}
+$('#syncRestore').onclick = () => restoreCloudDialog();
 $('#syncOff').onclick = async () => {
   await call('sync:off').catch((err) => toast(err.message, 'err'));
   await refresh();

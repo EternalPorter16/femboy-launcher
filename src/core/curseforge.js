@@ -265,9 +265,10 @@ async function installModpack(modId, progress) {
 }
 
 function readManifest(file) {
-  const zip = new AdmZip(file);
+  const zip = require('./archive').open(file);
   const manifest = JSON.parse(zip.readAsText('manifest.json') || 'null');
   if (!manifest?.minecraft) throw new Error('Это не модпак CurseForge (нет manifest.json)');
+  if (!Array.isArray(manifest.files) || manifest.files.length > require('./archive').LIMITS.entries) throw new Error('Некорректный или слишком большой список файлов модпака');
   const primary = (manifest.minecraft.modLoaders.find((l) => l.primary) || manifest.minecraft.modLoaders[0])?.id || '';
   const [, loader, loaderVersion] = /^(fabric|quilt|forge|neoforge)-(.+)$/.exec(primary) || [];
   if (!loader) throw new Error(`Не понимаю загрузчик модпака: ${primary || 'не указан'}`);

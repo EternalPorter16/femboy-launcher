@@ -121,6 +121,7 @@ test('release.bat на копии: ошибки тестов/публикаци�
   fs.writeFileSync(path.join(p.root, 'build/publish-yandex.ps1'), 'param([string]$Out)\nAdd-Content -LiteralPath $env:FAKELOG -Value "publish"\nexit ([int]$env:PUBLISH_FAIL)\n');
   fs.writeFileSync(path.join(p.root, 'build/publish-github.ps1'), 'param([string]$Out)\nAdd-Content -LiteralPath $env:FAKELOG -Value "github"\nexit 0\n');
   fs.writeFileSync(path.join(p.root, 'build/clean-dist.js'), 'process.exit(0);');
+  fs.writeFileSync(path.join(p.root, 'build/release-build.js'), 'require("fs").appendFileSync(process.env.FAKELOG,"build\\n");process.exit(0);');
   fs.writeFileSync(path.join(p.root, 'build/release-notes.js'), 'process.exit(0);');
   fs.writeFileSync(path.join(p.root, 'build/website-release.js'), 'require("fs").appendFileSync(process.env.FAKELOG,"website\\n");process.exit(Number(process.env.WEBSITE_FAIL));');
   const log = path.join(p.root, 'calls.log');

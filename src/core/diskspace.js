@@ -33,4 +33,24 @@ async function ensure(dir, need) {
   }
 }
 
-module.exports = { free, ensure, fmtSize };
+// То же без ожидания: для синхронных путей (распаковка копии мира)
+function ensureSync(dir, need) {
+  if (!(need > 0)) return;
+  let d = path.resolve(dir);
+  while (!fs.existsSync(d)) {
+    const up = path.dirname(d);
+    if (up === d) break;
+    d = up;
+  }
+  let have;
+  try {
+    const st = fs.statfsSync(d);
+    have = Number(st.bavail) * Number(st.bsize);
+  } catch {
+    return;
+  }
+  const want = need + SPARE;
+  if (have < want) throw new Error(`На диске не хватает места: нужно около ${fmtSize(want)}, свободно ${fmtSize(have)}. Освободи место (Настройки → «Место и переезд» → «Освободить место») и повтори`);
+}
+
+module.exports = { free, ensure, ensureSync, fmtSize };

@@ -47,12 +47,24 @@ function profileBelongs(id, json, inst) {
 async function plan() {
   const { root, java: javaRoot } = store.paths();
   const insts = instances.list();
+  const instanceDirs = fs.readdirSync(store.paths().instances, { withFileTypes: true }).filter((e) => e.isDirectory() || e.isSymbolicLink());
+  const valid = (i) => i && typeof i === 'object' && !Array.isArray(i) && typeof i.id === 'string' && typeof i.version === 'string' && i.version.length > 0;
+  const known = new Set(insts.filter(valid).map((i) => i.id));
+  if (insts.some((i) => !valid(i)) || instanceDirs.some((e) => !known.has(e.name))) {
+    throw new Error('Очистка остановлена: сначала восстанови настройки повреждённой сборки');
+  }
+  if (instanceDirs.some((e) => fs.existsSync(path.join(store.paths().instances, e.name, '.pack-update')))) {
+    throw new Error('Очистка остановлена: сначала заверши или восстанови обновление модпака');
+  }
   const versionsDir = path.join(root, 'versions');
 
   // 1. Какие версии нужны: версия игры каждой сборки и её профиль загрузчика
   const keep = new Set();
   const allVersions = dirs(versionsDir);
   const jsons = new Map(allVersions.map((v) => [v, readJson(path.join(versionsDir, v, v + '.json'))]));
+  if ([...jsons.values()].some((json) => !json || typeof json !== 'object' || Array.isArray(json))) {
+    throw new Error('Очистка остановлена: не удалось прочитать настройки установленной версии игры');
+  }
   for (const inst of insts) {
     keep.add(inst.version);
     for (const v of allVersions) if (profileBelongs(v, jsons.get(v), inst)) keep.add(v);
@@ -89,10 +101,19 @@ async function plan() {
     if (idx) keepIndexes.add(idx);
   }
   const indexFiles = fs.existsSync(path.join(assetsRoot, 'indexes')) ? fs.readdirSync(path.join(assetsRoot, 'indexes')).filter((f) => f.endsWith('.json')) : [];
+  for (const v of keep) {
+    const idx = jsons.get(v)?.assetIndex?.id;
+    if (idx && !indexFiles.includes(`${idx}.json`) && !indexFiles.includes(`${v}.json`)) throw new Error('Очистка остановлена: не удалось прочитать список ресурсов игры');
+  }
   const usedObjects = new Set();
   for (const f of indexFiles) {
     if (!keepIndexes.has(f.replace(/\.json$/, ''))) continue;
-    for (const o of Object.values(readJson(path.join(assetsRoot, 'indexes', f))?.objects || {})) usedObjects.add(o.hash);
+    const index = readJson(path.join(assetsRoot, 'indexes', f));
+    if (!index?.objects || typeof index.objects !== 'object' || Array.isArray(index.objects)) throw new Error('Очистка остановлена: не удалось прочитать список ресурсов игры');
+    for (const o of Object.values(index.objects)) {
+      if (!o || typeof o.hash !== 'string' || !/^[0-9a-f]{40}$/i.test(o.hash)) throw new Error('Очистка остановлена: не удалось прочитать список ресурсов игры');
+      usedObjects.add(o.hash);
+    }
   }
   const unusedObjects = [];
   for (const sub of dirs(path.join(assetsRoot, 'objects'))) {

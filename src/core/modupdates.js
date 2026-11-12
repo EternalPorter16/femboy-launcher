@@ -16,6 +16,10 @@ const { postJson, getJson, download, throwIfCancelled } = require('./net');
 
 const MR = 'https://api.modrinth.com/v2';
 const loadersFor = (loader) => (loader === 'quilt' ? ['quilt', 'fabric'] : [loader]);
+// Имя файла приходит из ответа сайта: в путь его пускаем только если это просто имя файла (FL-SEC-06)
+function validFilename(name) {
+  return typeof name === 'string' && !!name && name !== '.' && name !== '..' && path.basename(name) === name && !/[\\/:*?"<>|\x00-\x1f]/.test(name);
+}
 const sha1 = (file) => crypto.createHash('sha1').update(fs.readFileSync(file)).digest('hex');
 
 const lastCheck = new Map(); // id сборки → найденные обновления (ставим только то, что нашли сами)
@@ -78,7 +82,7 @@ async function modrinthUpdates(inst, byHash) {
   for (const [hash, ver] of Object.entries(res)) {
     const m = byHash.get(hash);
     const f = ver.files.find((x) => x.primary) || ver.files[0];
-    if (!m || !f || f.hashes.sha1 === hash) continue;
+    if (!m || !f || f.hashes.sha1 === hash || !validFilename(f.filename)) continue;
     updates.push({ file: m.file, title: m.title || ver.name, from: m.version || m.file, to: ver.version_number, source: 'modrinth', projectId: ver.project_id, url: f.url, filename: f.filename, sha1: f.hashes.sha1, enabled: m.enabled, icon: m.icon, changelog: plainChangelog(ver.changelog) });
     byHash.delete(hash);
   }
@@ -123,6 +127,7 @@ async function check(instId) {
   fs.mkdirSync(cacheDir, { recursive: true });
   const safe = [];
   for (const u of updates) {
+    if (!validFilename(u.filename)) continue;
     const cached = path.join(cacheDir, u.filename);
     try {
       await download(u.url, cached, { sha1: u.sha1 });
@@ -152,7 +157,7 @@ async function apply(instId, files, progress = () => {}) {
     progress(`Обновляю ${u.title} (${i + 1} / ${found.length})…`, (i / found.length) * 100);
     let update;
     try {
-      if (!u.filename || path.basename(u.filename) !== u.filename) throw new Error('Некорректное имя файла мода');
+      if (!validFilename(u.filename)) throw new Error('Некорректное имя файла мода');
       update = packupdate.begin(instId);
       const target = path.join(dir, u.filename + (u.enabled ? '' : '.disabled'));
       const staged = update.path(path.relative(instances.gameDir(instId), target));

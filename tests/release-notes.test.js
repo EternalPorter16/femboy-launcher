@@ -77,7 +77,7 @@ test('настоящий проект: скрипт на месте, а release.
   const test = bat.indexOf('call npm test');
   const del = bat.search(/del .*release-notes\.md/i);
   const gen = bat.indexOf('build\\release-notes.js');
-  const builder = bat.indexOf('npx electron-builder');
+  const builder = bat.indexOf('node build\\release-build.js');
   assert.ok(test >= 0 && del > test && gen > del && builder > gen, 'порядок: тесты → удалить старые заметки → создать новые → сборка');
   assert.match(bat.slice(gen, bat.indexOf('\n', gen)), /\|\|/, 'сбой скрипта заметок не останавливает выпуск');
 });

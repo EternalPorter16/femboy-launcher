@@ -6,6 +6,23 @@ const crypto = require('crypto');
 const AdmZip = require('adm-zip');
 const { profile, put, dump } = require('./helpers');
 
+test('migration rejects a pending pack journal and never copies recovery state into a new identity', async t => {
+  const { inst, instances, migrate } = setup(t);
+  const source = instances.dirOf(inst.id), before = fs.readFileSync(path.join(source, 'instance.json'));
+  put(source, { '.pack-update/journal.json': '{broken', '.world-restore/restore-old/level.dat': 'INCOMPLETE', '.minecraft/.cache/.world-restore/restore-old/level.dat': 'INCOMPLETE' });
+  await assert.rejects(migrate.run(inst.id, '1.21.4'), /заверши или восстанови обновление/);
+  assert.equal(instances.list().length, 1);
+  assert.deepEqual(fs.readFileSync(path.join(source, 'instance.json')), before);
+  assert.equal(fs.readFileSync(path.join(source, '.pack-update/journal.json'), 'utf8'), '{broken');
+  fs.rmSync(path.join(source, '.pack-update'), { recursive: true });
+  const { instance: copy } = await migrate.run(inst.id, '1.21.4');
+  assert.notEqual(copy.id, inst.id);
+  assert.equal(fs.existsSync(path.join(instances.dirOf(copy.id), '.pack-update')), false);
+  assert.equal(fs.existsSync(path.join(instances.dirOf(copy.id), '.world-restore')), false);
+  assert.equal(fs.existsSync(path.join(instances.gameDir(copy.id), '.cache/.world-restore')), false);
+  assert.equal(fs.readFileSync(path.join(source, '.world-restore/restore-old/level.dat'), 'utf8'), 'INCOMPLETE');
+});
+
 const sha1 = (b) => crypto.createHash('sha1').update(b).digest('hex');
 const jar = (id, { version = '1.0', name, depends = {} } = {}) => {
   const z = new AdmZip();

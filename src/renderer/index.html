@@ -438,6 +438,9 @@
                     <button class="btn ghost" id="syncNow">Синхронизировать</button>
                     <button class="btn ghost" id="syncOff">Выключить</button>
                   </div>
+                  <div class="row bg-row">
+                    <button class="btn ghost" id="syncRestore">Восстановить облако с этого компьютера…</button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -479,13 +482,15 @@
                   <h3>Обновления</h3>
                   <p class="update-line">Версия лаунчера: <b id="appVersion"></b></p>
                   <p class="hint" id="updateText"></p>
+                  <label class="toggle"><input type="checkbox" id="backgroundUpdateChecks"><span class="knob"></span>Проверять и скачивать обновления лаунчера в фоне</label>
+                  <p class="hint">Если выключено, проверяй обновления вручную. Уже отправленный запрос отменить задним числом нельзя.</p>
                   <button class="btn soft" id="updateCheck">Проверить обновления</button>
                 </div>
                 <div class="card">
                   <h3>Файлы</h3>
                   <p class="hint" id="dataDir"></p>
                   <p class="hint" id="portableNote" hidden></p>
-                  <div class="row bg-row"><button class="btn soft" id="openData">Открыть папку лаунчера</button><button class="btn soft" id="openLog" title="Ход запуска, ошибки и события лаунчера">Открыть лог лаунчера</button></div>
+                  <div class="row bg-row"><button class="btn soft" id="openPrivacy">Приватность и сетевые функции</button><button class="btn soft" id="openData">Открыть папку лаунчера</button><button class="btn soft" id="openLog" title="Ход запуска, ошибки и события лаунчера">Открыть лог лаунчера</button></div>
                 </div>
                 <div class="card">
                   <h3>Отчёт для поддержки</h3>

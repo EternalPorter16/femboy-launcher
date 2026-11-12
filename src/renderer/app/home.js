@@ -249,7 +249,9 @@ function renderStrip() {
         : stripCard('mint', '💾', 'Копий мира пока нет', state.settings.autoBackup === 'off' ? 'автокопии выключены' : 'сохраню после игры', '<button class="btn soft" data-act="restore">Миры</button>');
 
   const s = state.sync || {};
-  const c3 = s.dir
+  const c3 = s.dir && s.error
+    ? stripCard('sky', '☁️', 'Синхронизация не удалась', s.error.split(String.fromCharCode(10))[0], '<span class="sc-ok err"><svg><use href="#i-warn"/></svg></span>', 'cloud')
+    : s.dir
     ? stripCard('sky', '☁️', 'Облако на связи', s.at ? `синхронизировано ${fmtDate(s.at)}` : 'ещё не синхронизировалось', '<span class="sc-ok"><svg><use href="#i-check"/></svg></span>')
     : stripCard('sky', '☁️', 'Облако не подключено', 'сборки и миры на всех твоих ПК', GO, 'cloud');
   $('#homeStrip').innerHTML = c1 + c2 + c3;

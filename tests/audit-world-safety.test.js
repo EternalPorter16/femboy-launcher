@@ -48,7 +48,7 @@ for (const mode of ['empty', 'one-world-file', 'missing-metadata']) {
     if (mode === 'empty') for (const name of fs.readdirSync(f.cloud)) fs.rmSync(path.join(f.cloud, name), { recursive: true, force: true });
     else fs.unlinkSync(path.join(f.cloud, mode === 'one-world-file' ? 'saves/World/level.dat' : 'instance.json'));
     f.put(f.local, 'new-local.txt', 'DO NOT UPLOAD DURING FAILED SYNC');
-    await assert.rejects(f.sync.syncInstance('test'), /облачной копии/);
+    await assert.rejects(f.sync.syncInstance('test'), /Облако ещё обновляется/);
     assert.equal(fs.readFileSync(path.join(f.local, 'saves/World/level.dat'), 'utf8'), 'PLAYER_LEVEL');
     assert.equal(fs.readFileSync(path.join(f.local, 'instance.json'), 'utf8'), '{"id":"test"}');
     assert.equal(fs.readFileSync(path.join(f.local, 'sync-base.json'), 'utf8'), f.baseBefore);
@@ -72,6 +72,11 @@ for (const operation of ['readdirSync', 'statSync']) {
 test('sync preserves normal new-file transfer and explicit local file removal', async (t) => {
   const f = await synced(t);
   f.put(f.cloud, 'config/new.txt', 'REMOTE_NEW');
+  // другой компьютер отдаёт файл вместе с манифестом (протокол 2: манифест пишется последним)
+  const manifest = JSON.parse(fs.readFileSync(path.join(f.cloud, '.femboy-sync.json'), 'utf8'));
+  manifest.files['config/new.txt'] = { size: 10, mtime: Math.round(fs.statSync(path.join(f.cloud, 'config/new.txt')).mtimeMs) };
+  manifest.gen++;
+  fs.writeFileSync(path.join(f.cloud, '.femboy-sync.json'), JSON.stringify(manifest));
   f.put(f.local, 'config/local.txt', 'LOCAL_NEW');
   await f.sync.syncInstance('test');
   assert.equal(fs.readFileSync(path.join(f.local, 'config/new.txt'), 'utf8'), 'REMOTE_NEW');

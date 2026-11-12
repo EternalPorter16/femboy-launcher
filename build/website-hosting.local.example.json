@@ -1,0 +1,6 @@
+{
+  "_readme": "Copy to build/website-hosting.local.json (ignored by git) and fill in the real SpaceWeb FTP host, technical preview address and login. Never put the password here: build/setup-spaceweb-key.ps1 stores it encrypted.",
+  "host": "ftp.example.invalid",
+  "previewUrl": "https://preview.example.invalid",
+  "login": ""
+}

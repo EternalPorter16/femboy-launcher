@@ -54,6 +54,7 @@ function renderSettings() {
   setSeg('motionSeg', s.motion || 'on');
   setSeg('ecoSeg', s.eco || 'auto');
   setSeg('langSeg', s.lang || 'ru');
+  $('#backgroundUpdateChecks').checked = s.backgroundUpdateChecks !== false;
   $('#discordRpc').checked = s.discordRpc !== false;
   $('#discordHideServer').checked = !!s.discordHideServer;
   $('#discordHideServer').disabled = s.discordRpc === false;
@@ -226,6 +227,8 @@ async function openNetCheck() {
   run();
 }
 $('#closeOnLaunch').onchange = (e) => saveSettings({ closeOnLaunch: e.target.checked });
+$('#backgroundUpdateChecks').onchange = (e) => saveSettings({ backgroundUpdateChecks: e.target.checked });
+$('#openPrivacy').onclick = () => call('app:privacy').catch((err) => toast(err.message, 'err'));
 $('#discordRpc').onchange = (e) => saveSettings({ discordRpc: e.target.checked });
 $('#discordHideServer').onchange = (e) => saveSettings({ discordHideServer: e.target.checked });
 $('#clearWhitelist').onchange = (e) => saveSettings({ clearWhitelist: e.target.checked });

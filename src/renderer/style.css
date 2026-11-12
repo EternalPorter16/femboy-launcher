@@ -485,6 +485,7 @@ input[type='range'] { accent-color: var(--accent); width: 100%; }
 .sc-text .ach-bar { height: 6px; margin-top: 7px; }
 .sc-ok { flex: none; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: color-mix(in srgb, #26c08e 16%, var(--surface)); color: color-mix(in srgb, #1f9c72 85%, var(--text)); }
 .sc-ok svg { width: 16px; height: 16px; }
+.sc-ok.err { background: color-mix(in srgb, #e5484d 16%, var(--surface)); color: color-mix(in srgb, #c62a2f 85%, var(--text)); }
 .strip-card .btn { flex: none; padding: 7px 14px; font-size: 12.5px; }
 .strip-card[data-act] { cursor: var(--cur-pointer); }
 .strip-card[data-act]:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
