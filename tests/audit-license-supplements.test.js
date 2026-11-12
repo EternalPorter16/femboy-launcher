@@ -15,3 +15,13 @@ test('changed preserved notice cannot silently enter a package',t=>{const f=fixt
 test('a dependency upgrade cannot inherit the old supplemental notice',t=>{const f=fixture(t);f.write('package-lock.json',JSON.stringify({packages:{'node_modules/example':{version:'2.0.0'}}}));f.write('node_modules/example/package.json',JSON.stringify({name:'example',version:'2.0.0',license:'MIT'}));assert.throws(()=>collect(f.root),/no distributable notice/);});
 test('supplemental notice traversal and malformed inventories are rejected',t=>{const f=fixture(t);f.manifest.packages['example@1.0.0'].notices[0].file='../notice.txt';f.save();assert.throws(()=>collect(f.root),/Invalid license supplement file/);f.manifest.packages=[];f.save();assert.throws(()=>collect(f.root),/Invalid license supplement inventory/);});
 test('canonical reference for lazy-val keeps upstream copyright review open',t=>{const f=fixture(t,'lazy-val','1.0.5',true),r=collect(f.root);assert.equal(r.inventory.complete,false);assert.equal(r.inventory.packages[0].reviewRequired,true);assert.ok(r.text.includes('not presented as a recovered upstream file'));});
+// Тексты в build/license-supplements сверяются по SHA-256 побайтно: в любой копии репозитория они должны выйти из git с LF,
+// даже при core.autocrlf=true (обычная настройка Windows и раннеров GitHub). Правило — в .gitattributes
+test('license supplements are checked out with LF under any core.autocrlf',()=>{
+ const root=path.join(__dirname,'..'),dir=path.join(root,'build','license-supplements'),{execFileSync}=require('node:child_process');
+ const files=fs.readdirSync(dir).map(n=>'build/license-supplements/'+n);
+ assert.ok(files.length>=5);
+ const out=execFileSync('git',['check-attr','eol','--',...files],{cwd:root,encoding:'utf8',windowsHide:true});
+ for(const f of files)assert.match(out,new RegExp(f.replace(/[.]/g,'\.')+': eol: lf'),f);
+ for(const f of files)assert.ok(!fs.readFileSync(path.join(root,f)).includes(13),f+' contains CR');
+});

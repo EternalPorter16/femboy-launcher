@@ -1,9 +1,11 @@
 // Модальные окна: каркас, создание и правка сборки, подтверждение удаления
 
 /* ---------- модалки ---------- */
+let modalCloseTimer = null;
 function openModal(html) {
   const m = $('#modal');
   const box = $('#modalBox');
+  clearTimeout(modalCloseTimer); // окно сразу после закрытия другого: отложенное закрытие не должно спрятать новое
   m.classList.remove('closing');
   box.className = 'modal-box card';
   box.isDirty = box.dispose = null;
@@ -23,7 +25,7 @@ function closeModal() {
   box.isDirty = box.dispose = null;
   Sounds.play('close');
   m.classList.add('closing');
-  setTimeout(() => m.classList.remove('open', 'closing'), 190);
+  modalCloseTimer = setTimeout(() => m.classList.remove('open', 'closing'), 190);
 }
 $('#modal').addEventListener('mousedown', (e) => e.target.id === 'modal' && closeModal());
 document.addEventListener('keydown', (e) => e.key === 'Escape' && closeModal());

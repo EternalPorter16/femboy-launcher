@@ -72,7 +72,16 @@ function env(t, { populate = true } = {}) {
   };
   e.L = (k, ...p) => (e.use(k), path.join(inst.dirOf(e.id), ...p));
   e.G = (k, ...p) => e.L(k, '.minecraft', ...p);
-  e.C = (...p) => path.join(cloud, sync.ROOT_NAME, sync.SPACE, 'instances', e.id, ...p);
+  // облачная копия — папка текущей линии (по указателю v2/instances/<id>/line.json); линии ещё нет — несуществующая папка
+  e.V = (...p) => path.join(cloud, sync.ROOT_NAME, sync.SPACE, ...p);
+  e.line = () => {
+    try {
+      return JSON.parse(fs.readFileSync(e.V('instances', e.id, 'line.json'), 'utf8')).line;
+    } catch {
+      return null;
+    }
+  };
+  e.C = (...p) => e.V('lines', e.line() || `${e.id}.none.0`, ...p);
   e.sync = async (k, running) => (e.use(k), sync.syncAll(running));
   e.one = async (k) => (e.use(k), sync.syncInstance(e.id));
   e.status = (k) => (e.use(k), sync.status());
@@ -444,13 +453,12 @@ async function history(e, rounds) {
     assert.deepEqual((await e.sync(other)).errors, []);
   }
 }
-const genOf = (e, k) => JSON.parse(R(e.L(k, 'sync-base.json'))).gen;
 const cloudGen = (e) => JSON.parse(R(e.C('.femboy-sync.json')));
 
-test('publishLocal после истории синхронизаций: поколение не откатывается, отдававший ПК не застревает, все сходятся', async (t) => {
+test('publishLocal после истории синхронизаций: новая линия, отдававший ПК не застревает и не теряет своё, все сходятся', async (t) => {
   const e = await both(t);
   await history(e, 4);
-  const genA = genOf(e, 'A');
+  const line0 = e.line();
   for (const f of ['level.dat', 'region/r.0.0.mca']) W(WORLD(e, 'A', ...f.split('/')), `${f}:v1`, T0 + 60000);
   W(e.G('A', 'config', 'x.toml'), 'cfg-v1', T0 + 60000);
   const restore = failCopyAt(2);
@@ -463,7 +471,8 @@ test('publishLocal после истории синхронизаций: пок�
   W(e.G('B', 'options.txt'), 'opt-B', T0 + 70000);
   e.use('B');
   await sync.publishLocal(e.id);
-  assert.ok(cloudGen(e).gen > genA, 'новая линия облака старше базы A');
+  assert.notEqual(e.line(), line0, 'новая линия');
+  assert.equal(fs.existsSync(e.V('lines', line0)), false, 'прежняя линия убрана в «Корзину»');
   const ra = await e.sync('A');
   assert.deepEqual(ra.errors, [], 'A не застревает на «облако старее последней синхронизации»');
   assert.deepEqual(ra.conflicts, []);
@@ -477,21 +486,28 @@ test('publishLocal после истории синхронизаций: пок�
   assert.equal(e.status('A').error, '');
 });
 
-test('пропавшая облачная копия после истории: пересоздаётся, другой ПК не застревает', async (t) => {
+test('пропавшая облачная копия (указатель есть, линии нет): остановка без изменений; «Восстановить облако» — выход, другой ПК сходится без потерь', async (t) => {
   const e = await both(t);
   await history(e, 3);
   W(e.G('B', 'options.txt'), 'opt-B2', T0 + 80000);
+  W(e.G('A', 'config', 'a-only.toml'), 'a-only', T0 + 80000);
   rm(e.C());
-  assert.deepEqual((await e.sync('B')).errors, []);
+  const B0 = tree(e.L('B'));
+  assert.match((await e.sync('B')).errors.join('\n'), /Облако ещё обновляется/, 'линия могла ещё не доехать: ждём, а не создаём новую');
+  assert.deepEqual(tree(e.L('B')), B0);
+  e.use('B');
+  await sync.publishLocal(e.id);
   assert.deepEqual((await e.sync('A')).errors, []);
   assert.equal(R(e.G('A', 'options.txt')), 'opt-B2');
+  assert.equal(R(e.G('A', 'config', 'a-only.toml')), 'a-only', 'своё A не потеряно');
+  assert.deepEqual((await e.sync('B')).errors, []);
   assert.deepEqual(tree(e.G('B')), tree(e.G('A')));
 });
 
-test('прерванный publishLocal: пометка pending уже с новым поколением, другие ждут, доводка без отката поколения', async (t) => {
+test('прерванный publishLocal: указатель не переключился, никто не застревает, повтор доводит', async (t) => {
   const e = await both(t);
   await history(e, 4);
-  const genA = genOf(e, 'A');
+  const line0 = e.line();
   W(e.G('B', 'options.txt'), 'opt-B3', T0 + 90000);
   e.use('B');
   const restore = failCopyAt(3);
@@ -500,11 +516,12 @@ test('прерванный publishLocal: пометка pending уже с нов
   } finally {
     restore();
   }
-  const pend = cloudGen(e);
-  assert.ok(pend.pending && pend.gen > genA);
-  assert.match((await e.sync('A')).errors[0], /другой компьютер не закончил/);
-  assert.deepEqual((await e.sync('B')).errors, []);
-  assert.ok(!cloudGen(e).pending && cloudGen(e).gen > pend.gen);
+  assert.equal(e.line(), line0, 'облако прежнее');
+  assert.deepEqual((await e.sync('A')).errors, [], 'A работает с прежней линией');
+  e.use('B');
+  await sync.publishLocal(e.id);
+  assert.notEqual(e.line(), line0);
+  assert.deepEqual(fs.readdirSync(e.V('lines')), [e.line()], 'недолитая линия и прежняя убраны');
   assert.deepEqual((await e.sync('A')).errors, []);
   assert.equal(R(e.G('A', 'options.txt')), 'opt-B3');
   assert.deepEqual(tree(e.G('B')), tree(e.G('A')));
@@ -674,41 +691,44 @@ test('база пишется атомарно (через fsx.writeJsonAtomic),
   assert.doesNotMatch(code, /writeFileSync\(baseFile/);
 });
 
-// ---------- 5. старое облако без манифеста ----------
+// ---------- 5. линия без манифеста, база без линии ----------
+// Облако прежних версий (без манифеста) теперь переводится только кнопкой — тесты MIX ниже
 
-test('старое облако без манифеста: ничего не удаляется по отсутствию файла, манифест строится из фактических файлов', async (t) => {
+test('линия без манифеста (повреждена или недокачана): остановка до изменений, ничего не удаляется по отсутствию файла', async (t) => {
   const e = await both(t);
-  // «старая версия» лаунчера: облако без манифеста; на A есть файл из базы, которого в облаке нет
   rm(e.C('.femboy-sync.json'));
   rm(e.C('.minecraft', 'mods', 'keep.jar'));
-  W(e.C('.minecraft', 'config', 'legacy.toml'), 'from-legacy', T0 + 1000);
-  // на B (новая версия, но база от старой: без gen и sha1)
-  const bf = e.L('B', 'sync-base.json');
-  const b = JSON.parse(fs.readFileSync(bf, 'utf8'));
-  delete b.gen;
-  delete b.v;
-  for (const v of Object.values(b.files)) delete v.sha1;
-  fs.writeFileSync(bf, JSON.stringify(b));
-  const r = await e.sync('B');
-  assert.deepEqual(r.errors, []);
-  assert.equal(R(e.G('B', 'mods', 'keep.jar')), 'KEEP', 'локальный файл не удалён');
-  assert.equal(R(e.C('.minecraft', 'mods', 'keep.jar')), 'KEEP', 'и возвращён в облако');
-  assert.equal(R(e.G('B', 'config', 'legacy.toml')), 'from-legacy');
-  assert.ok(fs.existsSync(e.C('.femboy-sync.json')), 'манифест построен');
-  const ra = await e.sync('A');
-  assert.deepEqual(ra.errors, []);
+  const B0 = pcState0(e, 'B');
+  const C0 = tree(e.C());
+  assert.match((await e.sync('B')).errors.join('\n'), /Облако ещё обновляется/);
+  assert.deepEqual(pcState0(e, 'B'), B0);
+  assert.deepEqual(tree(e.C()), C0);
+  e.use('B');
+  await sync.publishLocal(e.id);
+  assert.equal(R(e.C('.minecraft', 'mods', 'keep.jar')), 'KEEP', 'выход — восстановление облака, файл вернулся');
+  assert.deepEqual((await e.sync('A')).errors, []);
   assert.deepEqual(tree(e.G('A')), tree(e.G('B')));
 });
 
-test('старое облако: сборка, выложенная прежней версией (без манифеста и базы), забирается целиком', async (t) => {
-  const e = env(t);
-  await e.sync('A');
-  rm(e.C('.femboy-sync.json'));
-  rm(e.L('A', 'sync-base.json'));
+test('база без линии (сборка 0f1afed или протокол 2 до линий): не доверяется целиком, расхождения — конфликт рядом, а не перезапись', async (t) => {
+  const e = await both(t);
+  W(e.G('A', 'config', 'x.toml'), 'cfg-A', T0 + 60000);
+  assert.deepEqual((await e.sync('A')).errors, []);
+  // база B «помнит» как синхронизированную свою версию cfg-B, которой нет в снимке-основании линии: доверие к такой базе
+  // сочло бы файл B неизменным и молча заменило бы его облачным cfg-A
+  W(e.G('B', 'config', 'x.toml'), 'cfg-B', T0 + 90000);
+  const bf = e.L('B', 'sync-base.json');
+  const b = JSON.parse(R(bf));
+  delete b.line;
+  b.files['.minecraft/config/x.toml'] = { size: 5, mtime: T0 + 90000 };
+  fs.writeFileSync(bf, JSON.stringify(b));
   const r = await e.sync('B');
   assert.deepEqual(r.errors, []);
-  assert.deepEqual(tree(e.G('B')), tree(e.G('A')));
+  assert.equal(R(e.G('B', 'config', 'x.toml')), 'cfg-B');
+  assert.deepEqual(find(e.G('B'), /^x\.toml\.sync-conflict-/).map(R), ['cfg-A']);
+  assert.equal(R(e.G('B', 'mods', 'keep.jar')), 'KEEP', 'совпавшее со снимком-основанием не тронуто');
 });
+const pcState0 = (e, k) => [tree(e.L(k)), R(e.L(k, 'sync-base.json'))];
 
 // ---------- 6. статус, имена, syncError ----------
 
@@ -874,7 +894,7 @@ test('восстановление облака идёт — запуск это
 
 // Обработчик IPC из настоящего main.js в песочнице: свои заглушки игры, задач и синхронизации
 function publishHandler({ running = false, launching = false, publish, syncAll } = {}) {
-  const main = fs.readFileSync(path.join(__dirname, '../src/main.js'), 'utf8');
+  const main = fs.readFileSync(path.join(__dirname, '../src/main.js'), 'utf8').replace(/\r\n/g, '\n'); // копия git с core.autocrlf=true даёт CRLF
   const start = main.indexOf('const cloudPublishes');
   const end = main.indexOf('\n});\n', start) + 5;
   assert.ok(start > 0 && end > start, 'обработчик sync:publishLocal не найден');
@@ -958,27 +978,29 @@ test('publishLocal не трогает облако, если отдача не 
   }
 });
 
-test('publishLocal: перенос облачной копии в Корзину не удался (файл занят) — ошибка, облако и база не изменились, syncedAt прежний', async (t) => {
+test('publishLocal: прежнюю линию не удалось убрать в Корзину (занята) — облако всё равно восстановлено, прежняя копия на месте, честное предупреждение', async (t) => {
   const e = await both(t);
-  const cloud0 = tree(e.C());
+  const old = e.C();
+  const cloud0 = tree(old);
+  W(e.G('B', 'options.txt'), 'opt-B', T0 + 60000);
   e.use('B');
-  const at0 = e.status('B').at;
-  const base0 = R(e.L('B', 'sync-base.json'));
   const real = fs.renameSync;
   fs.renameSync = (from, to) => {
-    if (path.resolve(from) === path.resolve(e.C())) throw Object.assign(new Error('EPERM: operation not permitted, rename'), { code: 'EPERM' });
+    if (path.resolve(from) === path.resolve(old)) throw Object.assign(new Error('EPERM: operation not permitted, rename'), { code: 'EPERM' });
     return real(from, to);
   };
+  let r;
   try {
-    await assert.rejects(sync.publishLocal(e.id), (err) => /занята другой программой/.test(err.message) && err.cause?.code === 'EPERM');
+    r = await sync.publishLocal(e.id);
   } finally {
     fs.renameSync = real;
   }
-  assert.deepEqual(tree(e.C()), cloud0);
-  const bin = path.join(e.cloud, sync.ROOT_NAME, sync.SPACE, 'Корзина');
-  assert.deepEqual(fs.existsSync(bin) ? fs.readdirSync(bin) : [], [], 'в Корзину ничего не ушло');
-  assert.equal(R(e.L('B', 'sync-base.json')), base0);
-  assert.equal(e.status('B').at, at0);
+  assert.match(r.warnings.join('\n'), /осталась в папке облака/);
+  assert.notEqual(e.C(), old);
+  assert.equal(R(e.C('.minecraft', 'options.txt')), 'opt-B');
+  assert.deepEqual(tree(old), cloud0, 'прежняя копия не тронута');
+  assert.deepEqual((await e.sync('A')).errors, []);
+  assert.equal(R(e.G('A', 'options.txt')), 'opt-B');
 });
 
 test('окно: кнопка «Восстановить облако с этого компьютера» с подтверждением, именем сборки и запретом при запущенной игре', () => {
@@ -1060,7 +1082,6 @@ test('английский перевод новых сообщений синх
     'Восстановить облако с этого компьютера?',
     'Выход, если облако застряло на «Облако ещё обновляется»',
     'Состояние сборки «My pack» на этом компьютере станет новым облачным состоянием. Прежняя облачная копия сохранится в корзине синхронизации: папка «Корзина» в папке облака.',
-    'Изменения, которые другой компьютер уже отдал в облако, а здесь их нет, будут заменены и на нём; они останутся в прежней облачной копии в «Корзине». Изменения, которые он ещё не отдал, не пропадут: при его следующей синхронизации они уйдут в облако, а если одно и то же изменили оба компьютера, обе версии сохранятся рядом.',
     'Сборка «My pack» сейчас запущена: сначала закрой игру.',
     'Восстановить облако',
     'Облако восстановлено с этого компьютера: «My pack» ♡',
@@ -1068,8 +1089,13 @@ test('английский перевод новых сообщений синх
     'Сначала дождись восстановления облака',
     'Облако не восстановлено: синхронизация этой сборки сейчас невозможна',
     'Сначала закрой игру и дождись завершения задач сборки',
-    // перевод облака на новый формат
-    ...[...fs.readFileSync(path.join(__dirname, '../src/renderer/app/sync-hardware.js'), 'utf8').matchAll(/<(?:h2|p class="(?:sub|hint)"|button class="btn \w+" id="sm\w+")>([^<$]*[А-Яа-я][^<$]*)</g)].map((m) => m[1]),
+    // окна «Восстановить облако» и перевода: все постоянные тексты из файла
+    ...[...fs.readFileSync(path.join(__dirname, '../src/renderer/app/sync-hardware.js'), 'utf8').matchAll(/<(?:h2|p class="(?:sub|hint)"|button class="btn \w+" id="s[mra]\w+")>([^<$]*[А-Яа-я][^<$]*)</g)].map((m) => m[1]),
+    '«My pack»: в прежней папке облака есть изменения с другого компьютера, которых нет здесь: файл «.minecraft/mods/b.jar», мир «World» и другие. Сборка не переведена, ничего не изменено.',
+    'Прежняя облачная копия занята другой программой и осталась в папке облака: abc.def.123. Облако восстановлено.',
+    '«My pack»: Эту сборку уже перевёл или восстановил другой компьютер: облачная копия взята оттуда, отличия этого компьютера сохранены рядом как конфликтные копии.',
+    'My pack: Сборка есть только в прежней папке облака. Перевести её может компьютер, на котором она есть, после обновления лаунчера там. Ничего не изменено.',
+    'My pack: Файлы сборки на этом компьютере менялись во время отдачи в облако (например, шла игра). Облако не изменено, ничего не потеряно; закрой игру и повтори.',
     'Перевести облако на новый формат…',
     'Перевожу облако на новый формат…',
     'Переведено сборок: 2 ♡ Обнови лаунчер на других компьютерах',
@@ -1088,6 +1114,15 @@ const OLD = (() => {
   const module = { exports: {} };
   const map = { './store': store, './instances': inst, './trash': require('../src/core/trash') };
   const code = fs.readFileSync(path.join(__dirname, 'sync-0.10.2-fixture.js'), 'utf8');
+  vm.runInThisContext(`(function (module, exports, require) {${code}\n})`)(module, module.exports, (n) => map[n] || require(n));
+  return module.exports;
+})();
+
+// Второй экземпляр нового модуля со своей очередью синхронизаций: «другой компьютер», который работает одновременно с этим
+const SYNC2 = (() => {
+  const module = { exports: {} };
+  const map = { './store': store, './instances': inst, './trash': require('../src/core/trash'), './fsx': fsx };
+  const code = fs.readFileSync(path.join(__dirname, '../src/core/sync.js'), 'utf8');
   vm.runInThisContext(`(function (module, exports, require) {${code}\n})`)(module, module.exports, (n) => map[n] || require(n));
   return module.exports;
 })();
@@ -1271,21 +1306,23 @@ test('MIX-4: 0.10.2 начал проход до ограды и дописал 
   assert.deepEqual(tree(e.L('A')), tree(e.L('B')));
 });
 
-test('MIX-5: обрыв перевода на каждом шаге: 0.10.2 ничего не меняет, другой новый ждёт, повтор доводит до конца без потерь', async (t) => {
+test('MIX-5: обрыв перевода на каждом шаге: указателя нет, локальные файлы, 0.10.2 и прежняя копия не изменились, другой новый ПК ничего не берёт; повтор доводит, недолитых линий не остаётся', async (t) => {
+  const named = (name) => (f) => path.basename(f) === name;
   const steps = [
     ['ограда', (e) => patchJson((f) => f === e.fence)],
     ['копия 1', () => failCopyAt(1)],
     ['копия 4', () => failCopyAt(4)],
     ['копия 8', () => failCopyAt(8)],
-    ['снимок-основание', (e) => patchJson((f) => f === e.C('.femboy-origin.json'))],
-    ['манифест', (e) => patchJson((f) => f === e.C('.femboy-sync.json'), 2)],
-    ['база после перевода', (e) => patchJson((f) => f === e.L('A', 'sync-base.json'))],
+    ['снимок-основание', () => patchJson(named('.femboy-origin.json'))],
+    ['манифест', () => patchJson(named('.femboy-sync.json'), 2)],
+    ['указатель', () => patchJson(named('line.json'))],
   ];
   for (const [step, inject] of steps) {
     const e = await legacyBoth(t);
     const P0 = tree(e.P());
     const files = (k) => [tree(e.L(k)), JSON.parse(R(e.L(k, 'sync-base.json'))).files]; // без ограды 0.10.2 законно синхронизируется: меняется только время базы
     const B0 = files('B');
+    const A0 = pcState(e, 'A');
     e.use('A');
     const restore = inject(e);
     let r;
@@ -1294,31 +1331,27 @@ test('MIX-5: обрыв перевода на каждом шаге: 0.10.2 ни
     } finally {
       restore();
     }
-    assert.equal(r.errors.length, 1, `${step}: перевод прервался`);
+    assert.deepEqual([r.errors.length, r.migrated], [1, 0], step);
+    assert.equal(e.line(), null, `${step}: указателя нет — новую линию никто не видит`);
+    assert.deepEqual(pcState(e, 'A'), A0, `${step}: локальные файлы и база не тронуты`);
     assert.deepEqual(tree(e.P()), P0, `${step}: прежняя копия цела`);
-    // 0.10.2: ничего не меняет ни у себя, ни в облаке
     await e.old('B');
     assert.deepEqual(files('B'), B0, `${step}: старый ПК не изменился`);
     assert.deepEqual(tree(e.P()), P0, `${step}: старый не тронул прежнюю копию`);
-    // третий компьютер с новой версией ждёт (кроме обрыва уже после перевода) и сборку не забирает
-    const rc = await e.sync('C');
-    if (step === 'база после перевода') assert.deepEqual(rc.errors, []);
-    else {
-      assert.match(rc.errors.join('\n'), /Облако ещё обновляется/, step);
-      assert.equal(fs.existsSync(e.L('C')), false, `${step}: у C сборка не появилась`);
-    }
-    // повтор обычной синхронизацией на A доводит перевод
-    const again = await e.sync('A');
-    assert.deepEqual(again.errors, [], step);
+    assert.match((await e.sync('C')).errors.join('\n'), /старом формате/, step);
+    assert.equal(fs.existsSync(e.L('C')), false, `${step}: у C сборка не появилась`);
+    // повтор — снова явный перевод
+    const again = await e.migrate('A');
+    assert.deepEqual([again.errors, again.migrated], [[], 1], step);
+    assert.deepEqual(fs.readdirSync(e.V('lines')), [e.line()], `${step}: недолитые линии убраны в «Корзину»`);
     assert.deepEqual(tree(e.C()), P0, step);
-    assert.deepEqual(tree(e.L('A')), P0, step);
     assert.equal(JSON.parse(R(e.fence)).fence, 'v2', step);
     assert.deepEqual((await e.sync('C')).errors, [], step);
     assert.deepEqual(tree(e.L('C')), P0, step);
   }
 });
 
-test('MIX-6: прежняя копия меняется во время снимка — перевод не засчитан, новая папка закрыта, повтор берёт новое состояние', async (t) => {
+test('MIX-6: старый ПК пишет в прежнюю папку во время перевода — перевод не засчитан; повтор называет, что отличается, и без подтверждения не переводит; «без них» — изменение остаётся в прежней папке, смешанный мир не принят', async (t) => {
   const e = await legacyBoth(t);
   const real = fs.promises.copyFile;
   let n = 0;
@@ -1333,11 +1366,148 @@ test('MIX-6: прежняя копия меняется во время сним
     fs.promises.copyFile = real;
   }
   assert.match(r.errors.join('\n'), /менялась во время перевода/);
-  assert.equal(JSON.parse(R(e.C('.femboy-sync.json'))).pending.migrate, true, 'новая папка помечена: другие её не трогают');
-  assert.match((await e.sync('C')).errors.join('\n'), /Облако ещё обновляется/);
+  assert.equal(e.line(), null, 'ложного успеха нет: указатель не записан');
+  const r2 = await e.migrate('A');
+  assert.equal(r2.migrated, 0);
+  assert.deepEqual(r2.ahead, ['«Моя сборка»: в прежней папке облака есть изменения с другого компьютера, которых нет здесь: мир «World». Сборка не переведена, ничего не изменено.']);
+  assert.equal(e.line(), null);
+  assert.equal(R(WORLD(e, 'A', 'level.dat')), 'level.dat:v0', 'чужой level.dat к целому миру не подмешан');
+  e.use('A');
+  const r3 = await sync.migrate(() => false, true);
+  assert.deepEqual([r3.errors, r3.ahead, r3.migrated], [[], [], 1]);
+  assert.deepEqual(tree(e.C('.minecraft', 'saves', 'World')), tree(WORLD(e, 'A')), 'в новой папке — целый мир этого ПК');
+  assert.equal(R(e.P('.minecraft', 'saves', 'World', 'level.dat')), 'level.dat:late', 'изменение другого ПК осталось в прежней папке');
+});
+
+test('MIX-6b: локальные файлы меняются во время отдачи — новая линия не засчитана, облако не изменено, повтор берёт новое состояние', async (t) => {
+  const e = await legacyBoth(t);
+  const real = fs.promises.copyFile;
+  let n = 0;
+  fs.promises.copyFile = async (from, to) => {
+    if (++n === 3) W(e.G('A', 'options.txt'), 'opt-during', T0 + 7000);
+    return real(from, to);
+  };
+  let r;
+  try {
+    r = await e.migrate('A');
+  } finally {
+    fs.promises.copyFile = real;
+  }
+  assert.match(r.errors.join('\n'), /менялись во время отдачи/);
+  assert.equal(e.line(), null);
+  const r2 = await e.migrate('A');
+  assert.deepEqual([r2.errors, r2.migrated], [[], 1]);
+  assert.equal(R(e.C('.minecraft', 'options.txt')), 'opt-during');
+});
+
+test('MIX-9: в прежней папке есть изменения другого ПК, которых здесь нет — перевод остановлен с перечнем, ничего не изменено; тот ПК обновился и перевёл — отставший получает его правки без лишних конфликтов, своё неотданное не теряет', async (t) => {
+  const e = await legacyBoth(t);
+  W(WORLD(e, 'B', 'region', 'r.1.0.mca'), 'r10:B', T0 + 90000);
+  W(e.G('B', 'mods', 'b.jar'), 'JAR-B', T0 + 90000);
+  assert.deepEqual((await e.old('B')).errors, []);
+  W(e.G('A', 'options.txt'), 'opt-A', T0 + 95000); // неотданное у A
+  const A0 = pcState(e, 'A');
+  const P0 = tree(e.P());
+  const r = await e.migrate('A');
+  assert.equal(r.migrated, 0);
+  assert.deepEqual(r.ahead, ['«Моя сборка»: в прежней папке облака есть изменения с другого компьютера, которых нет здесь: файл «.minecraft/mods/b.jar», мир «World». Сборка не переведена, ничего не изменено.']);
+  assert.equal(fs.existsSync(e.fence), false, 'ограды нет: старые ПК синхронизируются как прежде');
+  assert.equal(e.line(), null);
+  assert.deepEqual(pcState(e, 'A'), A0);
+  assert.deepEqual(tree(e.P()), P0);
+  assert.match(e.status('A').error, /изменения с другого компьютера/);
+  // B обновился и переводит сам
+  const rb = await e.migrate('B');
+  assert.deepEqual([rb.errors, rb.ahead, rb.migrated], [[], [], 1]);
+  const ra = await e.sync('A');
+  assert.deepEqual([ra.errors, ra.conflicts], [[], []], 'отставший A просто получает новое');
+  assert.equal(R(WORLD(e, 'A', 'region', 'r.1.0.mca')), 'r10:B');
+  assert.equal(R(e.G('A', 'mods', 'b.jar')), 'JAR-B');
+  assert.equal(R(e.C('.minecraft', 'options.txt')), 'opt-A', 'неотданное A ушло в облако');
+  assert.deepEqual((await e.sync('B')).errors, []);
+  assert.deepEqual(tree(e.L('A')), tree(e.L('B')));
+});
+
+test('MIX-10: два новых ПК одновременно переводят одну сборку — файлы линий не смешиваются, первая записанная линия остаётся, второй ПК сливает в неё свои правки; ничего не потеряно', async (t) => {
+  const e = await legacyBoth(t);
+  // у обоих свои неотданные правки (оба в остальном совпадают с прежней папкой)
+  W(WORLD(e, 'A', 'region', 'r.0.0.mca'), 'r00:A', T0 + 60000);
+  W(e.G('A', 'mods', 'a.jar'), 'JAR-A', T0 + 60000);
+  W(e.G('B', 'options.txt'), 'opt-B', T0 + 60000);
+  W(e.G('B', 'mods', 'b.jar'), 'JAR-B', T0 + 60000);
+  // пока A заливает свою линию, B проходит перевод целиком
+  const real = fs.promises.copyFile;
+  let n = 0;
+  let rb = null;
+  fs.promises.copyFile = async (...a) => {
+    if (++n === 2 && !rb) {
+      e.use('B');
+      rb = await SYNC2.migrate();
+      e.use('A');
+    }
+    return real(...a);
+  };
+  let ra;
+  try {
+    ra = await e.migrate('A');
+  } finally {
+    fs.promises.copyFile = real;
+  }
+  assert.deepEqual([rb.errors, rb.migrated], [[], 1]);
+  assert.deepEqual([ra.errors, ra.migrated], [[], 1]);
+  assert.match(ra.warnings.join('\n'), /уже перевёл или восстановил другой компьютер/);
+  assert.deepEqual(ra.conflicts, []);
+  assert.match(e.line(), new RegExp(`^${e.id}\\.${e.store('B').syncDevice}\\.`), 'текущая — линия B, записанная первой');
+  assert.deepEqual(fs.readdirSync(e.V('lines')), [e.line()], 'линия A убрана в «Корзину», а не смешана');
+  assert.deepEqual((await e.sync('B')).errors, []);
+  assert.deepEqual(tree(e.L('A')), tree(e.L('B')));
+  const all = tree(e.L('A')).join('\n');
+  for (const s of ['r00:A', 'JAR-A', 'opt-B', 'JAR-B']) assert.ok(all.includes(s), s);
+});
+
+test('MIX-10b: указатель второго ПК затёр первый (программа облака принесла его позже) — первый ПК сливает свои правки в новую линию, миры не смешаны, ничего не потеряно', async (t) => {
+  const e = await legacyBoth(t);
+  W(e.G('B', 'mods', 'b.jar'), 'JAR-B', T0 + 60000);
+  assert.deepEqual((await e.migrate('A')).migrated, 1);
+  const lineA = e.line();
+  W(WORLD(e, 'A', 'region', 'r.0.0.mca'), 'r00:A', T0 + 80000);
   assert.deepEqual((await e.sync('A')).errors, []);
-  assert.equal(R(e.C('.minecraft', 'saves', 'World', 'level.dat')), 'level.dat:late');
-  assert.equal(R(WORLD(e, 'A', 'level.dat')), 'level.dat:late');
+  // указатель A до B ещё не доехал: B переводит и пишет свой; программа облака оставляет последний — указатель B
+  const ptr = e.V('instances', e.id, 'line.json');
+  fs.renameSync(ptr, ptr + '.in-transit');
+  const rb = await e.migrate('B');
+  fs.rmSync(ptr + '.in-transit');
+  assert.deepEqual([rb.errors, rb.migrated], [[], 1]);
+  assert.notEqual(e.line(), lineA);
+  const ra = await e.sync('A');
+  assert.deepEqual(ra.errors, []);
+  assert.equal(fs.existsSync(e.V('lines', lineA)), false, 'своя прежняя линия A убрана в «Корзину»');
+  assert.deepEqual((await e.sync('B')).errors, []);
+  assert.deepEqual(tree(e.L('A')), tree(e.L('B')));
+  const all = tree(e.L('A')).join('\n');
+  for (const s of ['r00:A', 'JAR-B']) assert.ok(all.includes(s), s);
+  // каждый мир целиком одной стороны
+  for (const w of fs.readdirSync(e.G('A', 'saves')).filter((x) => x.startsWith('World'))) {
+    const r00 = R(e.G('A', 'saves', w, 'region', 'r.0.0.mca'));
+    assert.ok(['r00:A', 'region/r.0.0.mca:v0'].includes(r00), w);
+    assert.equal(R(e.G('A', 'saves', w, 'level.dat')), 'level.dat:v0', w);
+  }
+});
+
+test('MIX-11: сборка есть только в прежней папке — отсюда не переводится, понятное объяснение, ограды нет; переводит компьютер, где она есть', async (t) => {
+  const e = await legacyBoth(t);
+  e.use('B');
+  const id2 = inst.create({ name: 'Только на B', version: '1.20.1' }).id;
+  W(path.join(inst.dirOf(id2), '.minecraft', 'options.txt'), 'only-B', T0);
+  assert.deepEqual((await e.old('B')).errors, []);
+  const r = await e.migrate('A');
+  assert.match(r.errors.join('\n'), /^Только на B: Сборка есть только в прежней папке облака/m);
+  assert.equal(fs.existsSync(path.join(e.cloud, sync.ROOT_NAME, 'deleted', id2)), false);
+  assert.ok(e.status('A').legacy >= 1);
+  assert.deepEqual((await e.migrate('B')).errors, []);
+  assert.deepEqual((await e.sync('A')).errors, []);
+  e.use('A');
+  assert.equal(R(path.join(inst.dirOf(id2), '.minecraft', 'options.txt')), 'only-B');
 });
 
 test('MIX-7: ограда — не удаление; настоящее удаление на 0.10.2 или на новой версии рядом с оградой ничего не стирает', async (t) => {
@@ -1389,15 +1559,21 @@ test('MIX-8: «Восстановить облако» после перевод
   assert.deepEqual(pcState(e, 'B'), B0);
 });
 
-test('окно: кнопка «Перевести облако на новый формат…» видна, только когда есть что переводить, и вызывает перевод только после подтверждения', () => {
+test('окно: кнопка «Перевести облако на новый формат…» видна, только когда есть что переводить; перевод — только после подтверждения, «без них» — только вторым подтверждением', () => {
   const html = fs.readFileSync(path.join(__dirname, '../src/renderer/index.html'), 'utf8');
   assert.match(html, /id="syncMigrate" hidden>Перевести облако на новый формат…</);
-  const hw = fs.readFileSync(path.join(__dirname, '../src/renderer/app/sync-hardware.js'), 'utf8');
+  const hw = fs.readFileSync(path.join(__dirname, '../src/renderer/app/sync-hardware.js'), 'utf8').replace(/\r\n/g, '\n');
   assert.match(hw, /\$\('#syncMigrate'\)\.hidden = !\(s\.dir && s\.legacy\)/);
-  assert.equal((hw.match(/call\('sync:migrate'/g) || []).length, 1);
-  const yes = hw.slice(hw.indexOf("$('#smYes', box).onclick"));
-  assert.ok(yes.indexOf("call('sync:migrate'") > 0 && yes.indexOf("call('sync:migrate'") < yes.indexOf('Переведено сборок'));
-  const main = fs.readFileSync(path.join(__dirname, '../src/main.js'), 'utf8');
+  assert.equal((hw.match(/call\('sync:migrate'/g) || []).length, 1, 'один вызов — в runMigrate');
+  const run = hw.slice(hw.indexOf('async function runMigrate'), hw.indexOf('function migrateAheadDialog'));
+  assert.ok(run.indexOf("call('sync:migrate', force)") < run.indexOf('Переведено сборок'), 'успех — только после ответа');
+  assert.match(run, /r\?\.ahead\?\.length\) migrateAheadDialog/);
+  assert.match(hw, /\$\('#smYes', box\)\.onclick = \(\) => \(closeModal\(\), runMigrate\(false\)\)/);
+  assert.match(hw, /\$\('#saYes', box\)\.onclick = \(\) => \(closeModal\(\), runMigrate\(true\)\)/);
+  assert.equal((hw.match(/runMigrate\(true\)/g) || []).length, 1, '«без них» — только из второго окна');
+  assert.match(hw, /if \(r\.errors\?\.length \|\| r\.ahead\?\.length\) toast/, 'остановленный перевод не выдаётся за успех');
+  const main = fs.readFileSync(path.join(__dirname, '../src/main.js'), 'utf8').replace(/\r\n/g, '\n');
   assert.match(main, /handle\('sync:migrate'[\s\S]{0,400}Сначала закрой игру/);
+  assert.match(main, /sync\.migrate\(\(id\) => game\.isRunning\(id\), force === true\)/);
   assert.doesNotMatch(main.replace(/handle\('sync:migrate'[\s\S]*?\n\}\);/, ''), /sync\.migrate\(/, 'перевод не вызывается автоматически');
 });

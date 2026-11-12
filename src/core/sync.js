@@ -26,11 +26,19 @@
 // Отдельная папка протокола 2 (`Femboy Launcher Sync/v2`). Лаунчер 0.10.2 и раньше синхронизирует `Femboy Launcher Sync/instances`
 // по своим правилам и из всей папки облака проверяет только существование файла `deleted/<id>`: есть — сборку целиком пропускает.
 // Защитить прежнюю папку одной таким файлом нельзя: старый клиент, уже начавший проход, доделывает его, а программа облака
-// приносит файлы в любом порядке. Поэтому протокол 2 живёт отдельно, а прежняя копия только читается — один раз, при явном
-// переводе (кнопка в настройках): пометка «перевод идёт» в новой папке → ограда `deleted/<id>` с меткой {"fence":"v2"} →
-// снимок прежней копии (если она менялась во время снимка — перевод не засчитан) → снимок-основание `.femboy-origin.json`
-// → окончательный манифест. Прежняя копия остаётся как была. База (sync-base.json) от прежней папки к новой относится
-// целиком только на компьютере, сделавшем перевод; на остальных — лишь записи, совпавшие со снимком-основанием.
+// приносит файлы в любом порядке. Поэтому протокол 2 живёт отдельно и данных прежней папки не берёт вовсе.
+//  - Линии. Облачная копия сборки — папка `v2/lines/<id>.<устройство>.<время>` («линия»); какая из них текущая, говорит
+//    указатель `v2/instances/<id>/line.json`. Новая линия (первая отдача, перевод, «Восстановить облако») целиком
+//    заливается и проверяется, и только потом пишется указатель. Две одновременные новые линии не смешивают файлы:
+//    каждая в своей папке, а указатель выбирает одну.
+//  - База доверяется целиком только для той линии, с которой она записана. Для другой линии (и для базы прежней папки)
+//    верны лишь записи, совпавшие со снимком-основанием линии (`.femboy-origin.json` — что было залито при её создании);
+//    остальное без базы: расхождение — конфликт с копией рядом, а не перезапись.
+//  - Перевод из прежней папки (только кнопкой). Источник — закрытое локальное состояние этого компьютера, а не снимок
+//    прежнего облака. До любых изменений прежняя копия сверяется с базой и файлами этого компьютера: есть изменения
+//    другого компьютера, которых здесь нет, — перевод останавливается (без них — только отдельным подтверждением).
+//    Затем ограда `deleted/<id>` = {"fence":"v2"} (0.10.2 перестаёт трогать сборку), новая линия из локальных файлов,
+//    проверка, что ни локальные файлы, ни прежняя копия не менялись, и указатель. Прежняя копия не меняется.
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
@@ -45,6 +53,7 @@ const BASE = 'sync-base.json';
 const WAIT = 'sync-wait.json';
 const MANIFEST = '.femboy-sync.json';
 const ORIGIN = '.femboy-origin.json';
+const POINTER = 'line.json';
 const TMP_SUFFIX = '.femboy-sync.tmp';
 // Не синхронизируем: логи, отчёты о вылетах, кэши, копии миров и замки. Папки пропускаем только в корне сборки и в её
 // .minecraft: мир с именем «backups» или «debug» внутри saves — обычный мир
@@ -65,7 +74,8 @@ const cloudRoot = () => {
   const root = legacyRoot();
   return root ? path.join(root, SPACE) : null;
 };
-const cloudOf = (id) => path.join(cloudRoot(), 'instances', id);
+const pointerOf = (id) => path.join(cloudRoot(), 'instances', id, POINTER);
+const lineDir = (line) => path.join(cloudRoot(), 'lines', line);
 const tombstone = (id) => path.join(cloudRoot(), 'deleted', id);
 const legacyOf = (id) => path.join(legacyRoot(), 'instances', id);
 const fenceOf = (id) => path.join(legacyRoot(), 'deleted', id);
@@ -76,9 +86,36 @@ const sha1Of = (e) => (e && e.sha1) || undefined;
 const BUSY_OTHER = 'Облако ещё обновляется: другой компьютер не закончил отдачу этой сборки. Ничего не изменено; подожди, пока программа облака закончит, и повтори. Если не проходит, запусти синхронизацию на том компьютере.';
 const BUSY_FILES = 'Облако ещё обновляется: файлы в облаке не совпадают с его описанием (программа облака не докачала их или другой компьютер не закончил). Ничего не изменено; подожди, пока программа облака закончит, и повтори.';
 const BUSY_LEGACY = 'Прежняя копия сборки в облаке менялась во время перевода (на другом компьютере ещё работает старый лаунчер или программа облака не докачала файлы). Перевод не закончен, ничего не потеряно; закрой лаунчер на других компьютерах, подожди, пока программа облака закончит, и повтори.';
+const BUSY_LOCAL = 'Файлы сборки на этом компьютере менялись во время отдачи в облако (например, шла игра). Облако не изменено, ничего не потеряно; закрой игру и повтори.';
 const LEGACY = 'Облако ещё в старом формате (лаунчер 0.10.2 и раньше), синхронизация приостановлена. Ничего не изменено; нажми «Перевести облако на новый формат…» в настройках синхронизации.';
+const ONLY_LEGACY = 'Сборка есть только в прежней папке облака. Перевести её может компьютер, на котором она есть, после обновления лаунчера там. Ничего не изменено.';
+const MERGED = 'Эту сборку уже перевёл или восстановил другой компьютер: облачная копия взята оттуда, отличия этого компьютера сохранены рядом как конфликтные копии.';
 const busyError = (msg) => Object.assign(new Error(msg), { code: 'CLOUD_BUSY' });
 const legacyError = () => Object.assign(new Error(LEGACY), { code: 'CLOUD_LEGACY' });
+// Перевод остановлен: в прежней папке есть изменения другого компьютера, которых нет здесь (units — миры и файлы)
+const aheadError = (units) => {
+  const what = units.slice(0, 6).map((k) => (/^(?:\.minecraft\/)?saves\/[^/]+$/.test(k) ? `мир «${k.split('/').pop()}»` : `файл «${k}»`)).join(', ') + (units.length > 6 ? ' и другие' : '');
+  return Object.assign(new Error(`в прежней папке облака есть изменения с другого компьютера, которых нет здесь: ${what}. Сборка не переведена, ничего не изменено.`), { code: 'CLOUD_AHEAD' });
+};
+
+// Текущая линия сборки: null — в новой папке её нет. Нечитаемый указатель — облако ещё обновляется (ничего не трогаем)
+const LINE_RE = /^[\w-]+\.[\w-]+\.\d+$/;
+function currentLine(id) {
+  const r = fsx.readJson(pointerOf(id));
+  if (!r.exists) return null;
+  const line = r.ok && r.data && r.data.line;
+  if (typeof line !== 'string' || !LINE_RE.test(line) || !line.startsWith(`${id}.`)) throw busyError(BUSY_FILES);
+  return line;
+}
+// Облачная копия сборки для чтения (имя для сообщений): папка текущей линии или null
+function cloudOf(id) {
+  try {
+    const line = currentLine(id);
+    return line ? lineDir(line) : null;
+  } catch {
+    return null;
+  }
+}
 
 // Файл deleted/<id> прежней папки: 'none' — нет, 'fence' — наша ограда от старых версий, 'deleted' — настоящее удаление
 // (так его пишут forget и 0.10.2: время, а не метка; нечитаемое содержимое тоже считаем удалением — сборку не трогаем)
@@ -96,8 +133,9 @@ function legacyMark(id) {
   return 'deleted';
 }
 const deletedElsewhere = (id) => fs.existsSync(tombstone(id)) || legacyMark(id) === 'deleted';
-// Сборка есть только в прежней папке и не переведена: синхронизация ждёт явного перевода
-const needsMigration = (id) => legacyMark(id) === 'none' && fs.existsSync(legacyOf(id)) && !fs.existsSync(path.join(cloudOf(id), MANIFEST));
+// В новой папке сборки нет, а в прежней она есть (и не удалена): синхронизация ждёт явного перевода. Ограда без указателя —
+// перевод начат, но не закончен (здесь или на другом компьютере): тоже ждёт, повтор начнёт его заново
+const needsMigration = (id) => !fs.existsSync(pointerOf(id)) && fs.existsSync(legacyOf(id)) && legacyMark(id) !== 'deleted';
 
 // Файлы папки: rel → { size, mtime }. Ссылки на папки других лаунчеров (перенос «на месте») пропускаем
 function scanTree(root, allowMissingRoot = false) {
@@ -231,9 +269,7 @@ function readBase(file) {
   const r = fsx.readJson(file);
   if (!r.exists) return { state: 'missing', files: {}, gen: 0 };
   if (!r.ok || !r.data || typeof r.data.files !== 'object' || !r.data.files || Array.isArray(r.data.files)) return { state: 'corrupt', files: {}, gen: 0 };
-  // база от прежней папки облака: её поколение к новой папке не относится
-  const legacy = r.data.space !== SPACE;
-  return { state: 'ok', files: r.data.files, gen: legacy ? 0 : r.data.gen || 0, legacy };
+  return { state: 'ok', files: r.data.files, gen: r.data.gen || 0, space: r.data.space || null, line: r.data.space === SPACE && typeof r.data.line === 'string' ? r.data.line : null };
 }
 function readManifest(cloud) {
   const r = fsx.readJson(path.join(cloud, MANIFEST));
@@ -250,29 +286,40 @@ function deviceId() {
   return d.syncDevice;
 }
 
-// Перевод сборки из прежней папки в новую (порядок и смысл шагов — в начале файла). Повтор после обрыва начинает снимок заново
-async function mirror(id, dev) {
-  const cloud = cloudOf(id);
-  const legacy = legacyOf(id);
-  const now = Date.now();
-  const manifest = (extra) => fsx.writeJsonAtomic(path.join(cloud, MANIFEST), { v: 2, gen: now, at: now, dev, deleted: {}, ...extra }, false);
-  fs.mkdirSync(cloud, { recursive: true });
-  manifest({ files: {}, pending: { dev, at: now, migrate: true } });
-  const mark = legacyMark(id);
-  if (mark === 'deleted') throw new Error('Сборка удалена на другом компьютере: перевести её нельзя');
-  if (mark === 'none') fsx.writeJsonAtomic(fenceOf(id), { fence: SPACE, dev, at: now }, false);
-  for (const name of fs.readdirSync(cloud)) if (name !== MANIFEST) fs.rmSync(path.join(cloud, name), { recursive: true, force: true });
-  const snap = scanTree(legacy, true);
-  const files = {};
-  for (const [rel, e] of Object.entries(snap)) {
-    const sha1 = await copy(at(legacy, rel), at(cloud, rel));
-    files[rel] = { size: e.size, mtime: e.mtime, ...(sha1 && { sha1 }) };
+const sameTree = (a, b) => Object.keys(a).length === Object.keys(b).length && Object.entries(a).every(([rel, e]) => b[rel] && b[rel].size === e.size && b[rel].mtime === e.mtime);
+
+// Перевод: что в прежней копии изменил другой компьютер, а здесь этого нет. Файл прежней копии не совпадает с базой этого
+// компьютера (последним, что он синхронизировал) и не совпадает с его файлом сейчас. Единица — мир целиком или файл
+async function legacyAhead(id, local, P, base) {
+  const L = scanTree(local, true);
+  const B = base.state === 'ok' ? base.files : {};
+  const near = (a, b) => !!a && !!b && a.size === b.size && Math.abs(a.mtime - b.mtime) <= TOLERANCE;
+  const units = new Set();
+  for (const rel of new Set([...Object.keys(P), ...Object.keys(B)])) {
+    const p = P[rel];
+    const l = L[rel];
+    if (p ? near(p, B[rel]) : !B[rel]) continue; // там то же, что здесь синхронизировали в последний раз
+    const here = p ? !!l && l.size === p.size && (Math.abs(l.mtime - p.mtime) <= EXACT || (await sha1File(at(local, rel))) === (await sha1File(at(legacyOf(id), rel)))) : !l;
+    if (!here) units.add(unitKey(rel));
   }
-  const again = scanTree(legacy, true);
-  const moved = Object.keys(again).length !== Object.keys(snap).length || Object.entries(snap).some(([rel, e]) => !again[rel] || again[rel].size !== e.size || again[rel].mtime !== e.mtime);
-  if (moved) throw busyError(BUSY_LEGACY);
-  fsx.writeJsonAtomic(path.join(cloud, ORIGIN), { v: 2, dev, at: now, files: snap }, false);
-  manifest({ files });
+  return [...units].sort();
+}
+
+// Свои старые линии этой сборки (прерванные отдачи, проигравший одновременный перевод) — в «Корзину» папки синхронизации
+function retireOwnLines(id, keep, dev) {
+  let list = [];
+  try {
+    list = fs.readdirSync(path.join(cloudRoot(), 'lines'));
+  } catch {
+    return;
+  }
+  for (const name of list) {
+    if (name === keep || !name.startsWith(`${id}.${dev}.`)) continue;
+    try {
+      fs.mkdirSync(path.join(cloudRoot(), 'Корзина'), { recursive: true });
+      fs.renameSync(lineDir(name), path.join(cloudRoot(), 'Корзина', name));
+    } catch {} // занята — уберём в следующий раз
+  }
 }
 
 const worldPrefix = (rel) => /^((?:\.minecraft\/)?saves\/[^/]+)\//.exec(rel)?.[1] || null;
@@ -280,35 +327,41 @@ const unitKey = (rel) => worldPrefix(rel) || rel;
 const stampOf = (d = new Date()) => `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
 const shortStamp = (d = new Date()) => `${pad(d.getDate())}.${pad(d.getMonth() + 1)} ${pad(d.getHours())}-${pad(d.getMinutes())}`;
 
-// Одна сборка: local — папка сборки у нас, cloud — её копия в облаке
-async function syncOne(id, { genFloor = 0, migrate = false } = {}) {
+// Одна сборка: local — папка сборки у нас, cloud — её текущая линия в облаке.
+// migrate — явный перевод из прежней папки (force — без изменений другого компьютера), publish — «Восстановить облако»
+async function syncOne(id, { migrate = false, force = false, publish = false } = {}) {
   const root = cloudRoot();
   if (!root) return null;
   if (deletedElsewhere(id)) return null; // сборку удалили на одном из компьютеров
   if (trash.has(id)) return null; // сборка в корзине: пока её можно вернуть, облако её не воскрешает и не трогает
   const local = instances.dirOf(id);
   if (fs.existsSync(path.join(local, '.pack-update'))) throw new Error('Сначала заверши или восстанови обновление модпака');
-  const cloud = cloudOf(id);
   const myDev = deviceId();
-  // ---- перевод из прежней папки: только по явному выбору; свой прерванный перевод доводим ----
-  let migrated = false;
-  if (needsMigration(id)) {
-    if (!migrate) throw legacyError();
-    await mirror(id, myDev);
-    migrated = true;
-  } else {
-    const m0 = readManifest(cloud);
-    if (m0.state === 'ok' && m0.m.pending && m0.m.pending.migrate) {
-      if (m0.m.pending.dev !== myDev) throw busyError(BUSY_OTHER);
-      await mirror(id, myDev);
-      migrated = true;
-    }
-  }
-  if (!fs.existsSync(cloud) && !fs.existsSync(local)) return null; // сборки нет ни здесь, ни в новой папке
   const baseFile = path.join(local, BASE);
   const now = Date.now();
   const stamp = stampOf(new Date(now));
-  const stat = { up: 0, down: 0, removed: 0, conflicts: [], warnings: [], ...(migrated && { migrated }) };
+  const stat = { up: 0, down: 0, removed: 0, conflicts: [], warnings: [] };
+
+  // ---- какая линия: текущая по указателю или новая из локальных файлов ----
+  const line = publish ? null : currentLine(id);
+  let fresh = null;
+  let legacySnap = null;
+  if (!line) {
+    if (!publish && needsMigration(id)) {
+      if (!migrate) throw legacyError();
+      if (!fs.existsSync(path.join(local, 'instance.json'))) throw new Error(ONLY_LEGACY);
+      legacySnap = scanTree(legacyOf(id), true);
+      if (!force) {
+        const ahead = await legacyAhead(id, local, legacySnap, readBase(baseFile));
+        if (ahead.length) throw aheadError(ahead);
+      }
+      // ограда до любых данных нового формата: 0.10.2 больше не забирает, не отдаёт и не удаляет эту сборку
+      if (legacyMark(id) === 'none') fsx.writeJsonAtomic(fenceOf(id), { fence: SPACE, dev: myDev, at: now }, false);
+      stat.migrated = true;
+    } else if (!fs.existsSync(local)) return null; // сборки нет ни здесь, ни в облаке
+    fresh = `${id}.${myDev}.${now}`;
+  }
+  const cloud = lineDir(line || fresh);
 
   recoverStage(local, stamp);
   sweepTmp(local);
@@ -317,23 +370,33 @@ async function syncOne(id, { genFloor = 0, migrate = false } = {}) {
   if (baseInfo.state === 'corrupt') stat.warnings.push('Список синхронизации на этом компьютере повреждён. Ничего не удалено и не перезаписано: расхождения сохранены как конфликты.');
   let reliable = baseInfo.state === 'ok';
   let bF = baseInfo.files;
-  if (baseInfo.legacy) {
-    // База от прежней папки. Целиком она верна только у того, кто сделал перевод (новая папка — снимок той же прежней копии).
-    // Другой компьютер мог синхронизироваться с прежней папкой и после снимка: верим лишь записям, совпавшим со снимком,
-    // остальное без базы — расхождение станет конфликтом с копией рядом, а не перезаписью
+  const trusted = !!line && reliable && baseInfo.line === line;
+  if (line && reliable && !trusted) {
+    // База от другой линии или от прежней папки. Целиком годится, только если она — более ранняя точка той линии, из которой
+    // создана эта (история внутри линии последовательна, поколение не больше). Иначе — записи, совпавшие со снимком-основанием,
+    // а для базы прежней папки ещё записи о файлах, которые в прежней папке не менялись с перевода (перевод прошёл сверку,
+    // значит, тогдашнее содержимое — предок новой линии). Остальное без базы: расхождение — конфликт рядом, не перезапись
     const o = fsx.readJson(path.join(cloud, ORIGIN));
-    const origin = o.ok && o.data && o.data.files && typeof o.data.files === 'object' ? o.data : null;
-    if (!origin || origin.dev !== myDev) {
+    const od = o.ok && o.data && typeof o.data === 'object' ? o.data : {};
+    const origin = od.files && typeof od.files === 'object' ? od.files : {};
+    const prev = od.prev && typeof od.prev === 'object' ? od.prev : null;
+    if (!(baseInfo.line && prev && prev.line === baseInfo.line && baseInfo.gen <= Number(prev.gen))) {
       reliable = false;
+      const P = baseInfo.space !== SPACE && od.legacy && typeof od.legacy === 'object' ? od.legacy : null;
+      const Pnow = P ? scanTree(legacyOf(id), true) : null;
+      const near = (a, b) => a.size === b.size && Math.abs(a.mtime - b.mtime) <= TOLERANCE;
       bF = Object.fromEntries(Object.entries(bF).filter(([rel, b]) => {
-        const e = origin && origin.files[rel];
-        return e && b && e.size === b.size && Math.abs(e.mtime - b.mtime) <= TOLERANCE;
+        const e = origin[rel];
+        if (e && b && near(e, b) && (!e.sha1 || !b.sha1 || e.sha1 === b.sha1)) return true;
+        return !!P && (P[rel] ? !!Pnow[rel] && near(P[rel], Pnow[rel]) : !Pnow[rel]);
       }));
     }
   }
+  const baseGen = trusted ? baseInfo.gen : 0;
   // Read both complete inventories before changing anything. An unreadable
   // subtree must not be mistaken for files deleted on the other computer.
   const L = scanTree(local, true);
+  const L0 = { ...L };
   const C = scanTree(cloud, true);
   let cloudExists = true;
   try {
@@ -342,7 +405,8 @@ async function syncOne(id, { genFloor = 0, migrate = false } = {}) {
     if (e.code !== 'ENOENT') throw e;
     cloudExists = false;
   }
-  if (!cloudExists) bF = {}; // облачной копии нет вовсе — отдаём всё
+  if (line && !cloudExists) throw busyError(BUSY_FILES); // указатель уже есть, а файлы линии ещё не доехали
+  if (!cloudExists) bF = {}; // новая линия — отдаём всё
   // Обрезанный (нулевой длины) instance.json в облако не отдаём: считаем, что его у нас нет, и берём целый из облака
   if (L['instance.json'] && L['instance.json'].size === 0) {
     delete L['instance.json'];
@@ -367,7 +431,7 @@ async function syncOne(id, { genFloor = 0, migrate = false } = {}) {
     else if (M) {
       if (M.pending && M.pending.dev !== myDev) problems.push('pending');
       else if (!M.pending) {
-        if ((M.gen || 0) < baseInfo.gen) problems.push('облако старее последней синхронизации');
+        if ((M.gen || 0) < baseGen) problems.push('облако старее последней синхронизации');
         for (const [rel, e] of Object.entries(M.files)) {
           const c = C[rel];
           if (!c || c.size !== e.size) problems.push(rel);
@@ -378,18 +442,14 @@ async function syncOne(id, { genFloor = 0, migrate = false } = {}) {
         }
         for (const rel of Object.keys(C)) if (!M.files[rel]) problems.push(`+${rel}`);
       }
-    } else if (baseInfo.gen > 0) problems.push('манифест облака пропал');
+    } else problems.push('манифест облака пропал'); // у линии он есть с самого начала
   }
   // Целостность облака не подтверждена (pending, несовпадение с манифестом): ничего не принимаем и не отдаём, сколько бы это ни длилось
   if (problems.length) throw busyError(problems.length === 1 && problems[0] === 'pending' ? BUSY_OTHER : BUSY_FILES);
   if (cloudExists) sweepTmp(cloud);
   const J = { ...(M ? M.deleted : {}) };
-  // Облачной копии (манифеста) нет: начинается новая линия облака (первая отдача, пропавшая копия, явный выход publishLocal).
-  // Её поколение не должно оказаться ниже базы другого компьютера, иначе тот навсегда увидит «облако старее последней
-  // синхронизации»: берём не меньше своей базы, прежнего манифеста (genFloor) и текущего времени в мс (база любого ПК от
-  // прежней линии — небольшой счётчик или более раннее время). Это же поколение несёт пометка pending, чтобы прерванная
-  // отдача новой линии доводилась без отката.
-  const oldGen = M ? M.gen || 0 : Math.max(baseInfo.gen, Number(genFloor) || 0, now);
+  // Поколение сравнивается только внутри одной линии; новая начинает с нуля
+  const oldGen = M ? M.gen || 0 : 0;
 
   // ---- сравнение ----
   const hashL = (rel) => {
@@ -597,10 +657,32 @@ async function syncOne(id, { genFloor = 0, migrate = false } = {}) {
     for (const [rel, j] of Object.entries({ ...J, ...Object.fromEntries(Object.entries(removedNow).map(([r, e]) => [r, { ...e, gen: newGen, at: now }])) })) {
       if (!files[rel] && now - (j.at || now) < JOURNAL_KEEP) deleted[rel] = j;
     }
+    if (fresh) {
+      // Новая линия засчитывается, только если источник был закрыт: локальные файлы не менялись во время отдачи,
+      // а прежняя копия (при переводе) — с момента сверки. Иначе указатель не пишется и линию никто не увидит
+      if (!sameTree(L0, L2)) throw busyError(BUSY_LOCAL);
+      if (legacySnap && !sameTree(legacySnap, scanTree(legacyOf(id), true))) throw busyError(BUSY_LEGACY);
+      // снимок-основание: что залито; от какой точки какой линии (для базы других ПК); прежняя копия при переводе со сверкой
+      const prev = baseInfo.state === 'ok' && baseInfo.line ? { line: baseInfo.line, gen: baseInfo.gen } : null;
+      fsx.writeJsonAtomic(path.join(cloud, ORIGIN), { v: 2, dev: myDev, at: now, files, prev, ...(legacySnap && !force && { legacy: legacySnap }) }, false);
+    }
     const changed = cloudChanges || !M || M.pending || JSON.stringify(Object.keys(deleted).sort()) !== JSON.stringify(Object.keys(J).sort());
     if (changed) fsx.writeJsonAtomic(path.join(cloud, MANIFEST), { v: 2, gen: newGen, at: now, dev: myDev, files, deleted }, false);
   }
-  fsx.writeJsonAtomic(baseFile, { v: 2, space: SPACE, at: now, gen: newGen, files: newBase }, false);
+  if (fresh) {
+    // Указатель — последним из облачных записей. Если другой компьютер успел создать линию раньше (одновременный перевод
+    // или первая отдача), его линия остаётся текущей, а эта сборка сверяется с ней как обычно, с прежней базой: свои
+    // отличия уходят в неё, общие изменения — конфликтной копией рядом. «Восстановить облако» заменяет указатель намеренно
+    if (!publish && fs.existsSync(pointerOf(id))) {
+      const merged = await syncOne(id);
+      merged.warnings.unshift(MERGED);
+      return { ...merged, ...(stat.migrated && { migrated: true }) };
+    }
+    fs.mkdirSync(path.dirname(pointerOf(id)), { recursive: true });
+    fsx.writeJsonAtomic(pointerOf(id), { line: fresh, dev: myDev, at: now }, false);
+  }
+  fsx.writeJsonAtomic(baseFile, { v: 2, space: SPACE, line: line || fresh, at: now, gen: newGen, files: newBase }, false);
+  retireOwnLines(id, line || fresh, myDev);
   return stat;
 }
 
@@ -647,9 +729,10 @@ async function syncInstance(id, opts) {
   }
 }
 
-// Явный выход из «облако ещё обновляется»: облачная копия сборки уходит в «Корзину» папки синхронизации (не стирается),
-// а наше состояние отдаётся как новая облачная копия. Только по выбору человека, автоматически не вызывается.
-// Всё, из-за чего отдача не состоится, проверяем ДО переноса облачной копии: иначе облако осталось бы без сборки.
+// Явный выход из «облако ещё обновляется»: наше состояние становится новой линией, указатель переключается на неё, и только
+// потом прежняя линия уходит в «Корзину» папки синхронизации (не стирается). Обрыв до переключения оставляет облако
+// прежним. Другие компьютеры ничего не теряют: их база относится к прежней линии, поэтому их отличия сохраняются рядом
+// как конфликтные копии. Только по выбору человека, автоматически не вызывается.
 async function publishLocal(id) {
   const root = cloudRoot();
   if (!root) throw new Error('Сначала выбери папку облака');
@@ -659,40 +742,38 @@ async function publishLocal(id) {
   if (deletedElsewhere(id)) throw new Error('Сборка удалена на другом компьютере: восстановить для неё облако нельзя');
   if (needsMigration(id)) throw legacyError(); // сначала явный перевод: иначе прежняя копия осталась бы без ограды
   if (fs.existsSync(path.join(instances.dirOf(id), '.pack-update'))) throw new Error('Сначала заверши или восстанови обновление модпака');
-  let genFloor = 0;
-  if (fs.existsSync(cloudOf(id))) {
-    const m = readManifest(cloudOf(id));
-    if (m.state === 'ok') genFloor = Number(m.m.gen) || 0; // новая линия облака — выше прежней, даже если часы этого ПК отстают
-    const dest = path.join(root, 'Корзина', `${id}-${Date.now()}`);
-    fs.mkdirSync(path.dirname(dest), { recursive: true });
+  const old = cloudOf(id); // нечитаемый указатель тоже заменяем
+  const r = await syncInstance(id, { publish: true });
+  if (old && fs.existsSync(old)) {
     try {
-      fs.renameSync(cloudOf(id), dest);
-    } catch (e) {
-      // Файл облачной копии открыт другой программой (часто — самой программой облака): ничего не перенесено и не изменено
-      if (['EPERM', 'EBUSY', 'EACCES'].includes(e.code)) throw Object.assign(new Error('Облачная копия сборки сейчас занята другой программой (например, программой облака). Ничего не изменено; подожди немного и повтори.'), { cause: e });
-      throw e;
+      fs.mkdirSync(path.join(root, 'Корзина'), { recursive: true });
+      fs.renameSync(old, path.join(root, 'Корзина', path.basename(old)));
+    } catch {
+      // занята программой облака: облако уже восстановлено, прежняя копия просто осталась на месте
+      r.warnings.push(`Прежняя облачная копия занята другой программой и осталась в папке облака: ${path.basename(old)}. Облако восстановлено.`);
     }
   }
-  return syncInstance(id, { genFloor });
+  return r;
 }
 
-// Сборки в папке облака (имя папки = id, внутри instance.json)
-function cloudIds(root) {
+// Сборки в папке облака: имя папки = id, внутри marker (instance.json в прежней папке, line.json в новой)
+function cloudIds(root, marker) {
   let list = [];
   try {
     list = fs.readdirSync(path.join(root, 'instances'));
   } catch {}
-  return list.filter((d) => /^[\w-]+$/.test(d) && fs.existsSync(path.join(root, 'instances', d, 'instance.json')));
+  return list.filter((d) => /^[\w-]+$/.test(d) && fs.existsSync(path.join(root, 'instances', d, marker)));
 }
 
-// Все сборки: свои отдаём, новые из облака (созданные на другом компьютере) забираем. migrate — явный перевод прежней папки
-async function syncAll(isRunning = () => false, { migrate = false } = {}) {
+// Все сборки: свои отдаём, новые из облака (созданные на другом компьютере) забираем. migrate — явный перевод прежней папки,
+// force — перевести и те сборки, где в прежней папке есть изменения другого компьютера (они там и останутся)
+async function syncAll(isRunning = () => false, { migrate = false, force = false } = {}) {
   const root = cloudRoot();
   if (!root) throw new Error('Сначала выбери папку облака');
   if (!fs.existsSync(store.get().settings.syncDir)) throw new Error('Папка облака не найдена — проверь, что программа облака установлена');
   fs.mkdirSync(path.join(root, 'instances'), { recursive: true });
-  const ids = new Set([...instances.list().map((i) => i.id), ...cloudIds(root), ...cloudIds(legacyRoot())]);
-  const total = { up: 0, down: 0, removed: 0, instances: 0, migrated: 0, errors: [], conflicts: [], warnings: [], skipped: [] };
+  const ids = new Set([...instances.list().map((i) => i.id), ...cloudIds(root, POINTER), ...cloudIds(legacyRoot(), 'instance.json')]);
+  const total = { up: 0, down: 0, removed: 0, instances: 0, migrated: 0, errors: [], conflicts: [], warnings: [], skipped: [], ahead: [] };
   const legacy = [];
   for (const id of ids) {
     if (isRunning(id)) {
@@ -704,7 +785,7 @@ async function syncAll(isRunning = () => false, { migrate = false } = {}) {
         if (fs.existsSync(instances.dirOf(id)) && !trash.has(id)) total.warnings.push(`«${nameOf(id)}»: сборка удалена на другом компьютере, здесь она осталась и больше не синхронизируется.`);
         continue;
       }
-      const s = await syncOne(id, { migrate });
+      const s = await syncOne(id, { migrate, force });
       if (!s) continue;
       total.instances++;
       if (s.migrated) total.migrated++;
@@ -713,26 +794,34 @@ async function syncAll(isRunning = () => false, { migrate = false } = {}) {
       total.warnings.push(...s.warnings.map((w) => `«${nameOf(id)}»: ${w}`));
     } catch (e) {
       if (e.code === 'CLOUD_LEGACY') legacy.push(`«${nameOf(id)}»`);
+      else if (e.code === 'CLOUD_AHEAD') total.ahead.push(`«${nameOf(id)}»: ${e.message}`);
       else total.errors.push(`${nameOf(id)}: ${e.message}`);
     }
   }
   if (legacy.length) total.errors.push(`${legacy.join(', ')}: ${LEGACY}`);
-  record(total.errors.length ? total.errors.join('\n') : null, '*');
+  const problems = [...total.errors, ...total.ahead];
+  record(problems.length ? problems.join('\n') : null, '*');
   return total;
 }
 
 // Сборку удалили у нас: облачные копии (новая и прежняя) убираем в «Корзину» своих папок, другие компьютеры их не вернут
 function forget(id) {
   if (!cloudRoot()) return;
-  for (const [copyDir, tomb, bin] of [
-    [cloudOf(id), tombstone(id), path.join(cloudRoot(), 'Корзина')],
-    [legacyOf(id), fenceOf(id), path.join(legacyRoot(), 'Корзина')],
-  ]) {
-    if (!fs.existsSync(copyDir)) continue;
-    fs.mkdirSync(path.dirname(tomb), { recursive: true });
-    fs.writeFileSync(tomb, String(Date.now()));
-    fs.mkdirSync(bin, { recursive: true });
-    fs.renameSync(copyDir, path.join(bin, `${id}-${Date.now()}`));
+  const now = Date.now();
+  const pointerDir = path.dirname(pointerOf(id));
+  if (fs.existsSync(pointerDir)) {
+    const cloud = cloudOf(id);
+    fs.mkdirSync(path.dirname(tombstone(id)), { recursive: true });
+    fs.writeFileSync(tombstone(id), String(now));
+    fs.mkdirSync(path.join(cloudRoot(), 'Корзина'), { recursive: true });
+    if (cloud && fs.existsSync(cloud)) fs.renameSync(cloud, path.join(cloudRoot(), 'Корзина', `${id}-${now}`));
+    fs.rmSync(pointerDir, { recursive: true, force: true });
+  }
+  if (fs.existsSync(legacyOf(id))) {
+    fs.mkdirSync(path.dirname(fenceOf(id)), { recursive: true });
+    fs.writeFileSync(fenceOf(id), String(now));
+    fs.mkdirSync(path.join(legacyRoot(), 'Корзина'), { recursive: true });
+    fs.renameSync(legacyOf(id), path.join(legacyRoot(), 'Корзина', `${id}-${now}`));
   }
 }
 
@@ -741,7 +830,7 @@ function status() {
   const d = store.get();
   let legacy = 0;
   if (legacyRoot()) {
-    for (const id of cloudIds(legacyRoot())) {
+    for (const id of cloudIds(legacyRoot(), 'instance.json')) {
       try {
         if (!trash.has(id) && needsMigration(id)) legacy++;
       } catch {}
@@ -757,7 +846,7 @@ const serial = (fn) => (...args) => (chain = chain.catch(() => {}).then(() => fn
 module.exports = {
   syncInstance: serial(syncInstance),
   syncAll: serial(syncAll),
-  migrate: serial((isRunning) => syncAll(isRunning, { migrate: true })),
+  migrate: serial((isRunning, force = false) => syncAll(isRunning, { migrate: true, force: !!force })),
   publishLocal: serial(publishLocal),
   forget,
   status,

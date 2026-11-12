@@ -911,12 +911,13 @@ handle('sync:publishLocal', async (id) => {
     cloudPublishes.delete(id);
   }
 });
-// «Перевести облако на новый формат» (sync.migrate): только по нажатию после подтверждения в окне и когда игры не идут
-handle('sync:migrate', () => {
+// «Перевести облако на новый формат» (sync.migrate): только по нажатию после подтверждения в окне и когда игры не идут.
+// force — второе подтверждение: переводить и сборки, где в прежней папке есть изменения другого компьютера
+handle('sync:migrate', (force) => {
   if (!store.get().settings.syncDir) throw new Error('Сначала выбери папку облака');
   const busy = instances.list().some((i) => game.isRunning(i.id) || launches.has(i.id) || packUpdates.has(i.id) || modInstalls.has(i.id) || cloudPublishes.has(i.id));
   if (busy) throw new Error('Сначала закрой игру и дождись завершения задач сборки');
-  return withTask(async (p) => (p('Перевожу облако на новый формат…', null), sync.migrate((id) => game.isRunning(id))));
+  return withTask(async (p) => (p('Перевожу облако на новый формат…', null), sync.migrate((id) => game.isRunning(id), force === true)));
 });
 
 handle('hw:info', () => hardware.info());

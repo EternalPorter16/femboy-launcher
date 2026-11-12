@@ -11,7 +11,7 @@ function renderSync() {
 }
 const syncResult = (r) => {
   if (!r) return;
-  if (r.errors?.length) toast('Синхронизация завершилась с ошибками. Проверь сообщения ниже.', 'err');
+  if (r.errors?.length || r.ahead?.length) toast('Синхронизация завершилась с ошибками. Проверь сообщения ниже.', 'err');
   else if (r.conflicts?.length || r.warnings?.length) toast('Синхронизация завершилась с предупреждениями ♡', 'err');
   else toast(`Синхронизировано ♡ Отдано файлов: ${r.up}, получено: ${r.down}`);
   r.errors?.forEach((e) => toast(e, 'err'));
@@ -45,7 +45,7 @@ function restoreCloudDialog() {
     <div class="crash-head"><div class="empty-cat" data-cat></div><div><h2>Восстановить облако с этого компьютера?</h2><p class="sub">Выход, если облако застряло на «Облако ещё обновляется»</p></div></div>
     <label class="field"><span>Сборка</span><select id="srInst">${state.instances.map((i) => `<option value="${esc(i.id)}">${esc(i.name)}</option>`).join('')}</select></label>
     <p class="hint" id="srText"></p>
-    <p class="hint">Изменения, которые другой компьютер уже отдал в облако, а здесь их нет, будут заменены и на нём; они останутся в прежней облачной копии в «Корзине». Изменения, которые он ещё не отдал, не пропадут: при его следующей синхронизации они уйдут в облако, а если одно и то же изменили оба компьютера, обе версии сохранятся рядом.</p>
+    <p class="hint">На другом компьютере ничего не перезапишется: где его сборка отличается от этой, при его следующей синхронизации обе версии сохранятся рядом (конфликтная копия) и уйдут в облако.</p>
     <p class="hint" id="srBusy" hidden></p>
     <div class="modal-actions wrap">
       <button class="btn ghost" id="srNo">Отмена</button>
@@ -80,29 +80,45 @@ function restoreCloudDialog() {
   };
 }
 $('#syncRestore').onclick = () => restoreCloudDialog();
-// «Перевести облако на новый формат» (sync.migrate): один раз после обновления с 0.10.2. Только после подтверждения
+// «Перевести облако на новый формат» (sync.migrate): один раз после обновления с 0.10.2. Только после подтверждения.
+// Если в прежней папке есть изменения другого компьютера, которых нет здесь, эти сборки не переводятся: второе окно
+// показывает, что именно отличается, и переводит без них только по отдельному подтверждению (force)
+async function runMigrate(force) {
+  try {
+    const r = await call('sync:migrate', force);
+    if (r?.migrated) toast(`Переведено сборок: ${r.migrated} ♡ Обнови лаунчер на других компьютерах`);
+    syncResult(r);
+    if (r?.ahead?.length) migrateAheadDialog(r.ahead);
+  } catch (err) {
+    toast(err.message, 'err');
+  }
+  await refresh().catch(() => {});
+}
+function migrateAheadDialog(list) {
+  const box = openModal(`
+    <div class="crash-head"><div class="empty-cat" data-cat></div><div><h2>Не всё переведено</h2><p class="sub">В прежней папке облака есть изменения другого компьютера</p></div></div>
+    ${list.map((t) => `<p class="hint">${esc(t)}</p>`).join('')}
+    <p class="hint">Лучше обнови лаунчер на том компьютере и переведи облако оттуда: тогда его изменения попадут в новую папку.</p>
+    <p class="hint">Если перевести отсюда, эти изменения в новую папку не попадут: они останутся в прежней папке облака и на том компьютере, а после обновления лаунчера там сохранятся рядом как конфликтные копии.</p>
+    <div class="modal-actions wrap">
+      <button class="btn ghost" id="saNo">Отмена</button>
+      <button class="btn soft" id="saYes">Перевести без них</button>
+    </div>`);
+  $('#saNo', box).onclick = () => closeModal();
+  $('#saYes', box).onclick = () => (closeModal(), runMigrate(true));
+}
 $('#syncMigrate').onclick = () => {
   const box = openModal(`
     <div class="crash-head"><div class="empty-cat" data-cat></div><div><h2>Перевести облако на новый формат?</h2><p class="sub">Нужно один раз после обновления лаунчера</p></div></div>
-    <p class="hint">Лаунчер скопирует сборки из прежней папки облака в новую («v2» в папке «Femboy Launcher Sync») и сверит их с этим компьютером. Прежняя копия останется нетронутой, в облаке понадобится ещё столько же места.</p>
-    <p class="hint">Лаунчеры 0.10.2 и раньше на других компьютерах перестанут синхронизировать эти сборки — обнови лаунчер там. Их несинхронизированные изменения не пропадут: после обновления они уйдут в облако, а если одно и то же изменили оба компьютера, обе версии сохранятся рядом.</p>
-    <p class="hint">Перед переводом закрой лаунчер на других компьютерах и дождись, пока программа облака закончит синхронизацию.</p>
+    <p class="hint">Лаунчер отдаст сборки с этого компьютера в новую папку облака («v2» в папке «Femboy Launcher Sync»). Прежняя копия только сверяется и остаётся нетронутой; в облаке понадобится ещё столько же места.</p>
+    <p class="hint">Если в прежней папке есть изменения другого компьютера, которых нет здесь, такая сборка не переводится: лаунчер покажет, что именно отличается.</p>
+    <p class="hint">Лаунчеры 0.10.2 и раньше на других компьютерах перестанут синхронизировать переведённые сборки — обнови лаунчер там. Их изменения не пропадут: после обновления, где сборки отличаются, обе версии сохранятся рядом.</p>
     <div class="modal-actions wrap">
       <button class="btn ghost" id="smNo">Отмена</button>
       <button class="btn soft" id="smYes">Перевести</button>
     </div>`);
   $('#smNo', box).onclick = () => closeModal();
-  $('#smYes', box).onclick = async () => {
-    closeModal();
-    try {
-      const r = await call('sync:migrate');
-      if (r?.migrated) toast(`Переведено сборок: ${r.migrated} ♡ Обнови лаунчер на других компьютерах`);
-      syncResult(r);
-    } catch (err) {
-      toast(err.message, 'err');
-    }
-    await refresh().catch(() => {});
-  };
+  $('#smYes', box).onclick = () => (closeModal(), runMigrate(false));
 };
 $('#syncOff').onclick = async () => {
   await call('sync:off').catch((err) => toast(err.message, 'err'));

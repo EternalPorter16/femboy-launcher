@@ -526,9 +526,12 @@ function extra(version) {
       } finally { window.call = o2; state.running.delete(inst.id); closeModal(); await s(300); }`],
     // «Перевести облако на новый формат…»: кнопка видна только при legacy > 0, отмена ничего не вызывает, подтверждение — один вызов
     // sync:migrate, успех — тост с числом сборок, ошибка — красный тост без успеха. Сам перевод подменён: облака в профиле нет
-    ['перевод облака: кнопка по счётчику, отмена, успех и ошибка', `
-      const o2 = window.call; const oSync = state.sync; let calls = 0; let mode = 'ok';
-      window.call = async (ch, ...a) => { if (ch === 'sync:migrate') { calls++; if (mode === 'err') throw new Error('EPERM: operation not permitted, rename'); return { up: 3, down: 0, migrated: 2, errors: [], conflicts: [], warnings: [] }; } return o2(ch, ...a); };
+    ['перевод облака: кнопка по счётчику, отмена, успех, остановка с перечнем и «без них», ошибка', `
+      const o2 = window.call; const oSync = state.sync; let calls = 0; let mode = 'ok'; const forces = [];
+      const AHEAD = '«Pack»: в прежней папке облака есть изменения с другого компьютера, которых нет здесь: мир «World». Сборка не переведена, ничего не изменено.';
+      window.call = async (ch, ...a) => { if (ch === 'sync:migrate') { calls++; forces.push(a[0]); if (mode === 'err') throw new Error('EPERM: operation not permitted, rename');
+        if (mode === 'ahead' && !a[0]) return { up: 0, down: 0, migrated: 0, errors: [], conflicts: [], warnings: [], ahead: [AHEAD] };
+        return { up: 3, down: 0, migrated: 2, errors: [], conflicts: [], warnings: [], ahead: [] }; } return o2(ch, ...a); };
       const q = (x) => document.querySelector(x);
       // новые тосты — по элементам, а не по счёту: старые тем временем исчезают
       const mark = () => new Set(document.querySelectorAll('#toasts .toast'));
@@ -538,16 +541,25 @@ function extra(version) {
         state.sync = { dir: 'X:/cloud', legacy: 2 }; renderSync(); const shownAt2 = !q('#syncMigrate').hidden;
         q('#syncMigrate').click(); await s(350);
         const box = q('#modalBox').innerText;
-        const texts = box.includes('Перевести облако на новый формат?') && box.includes('Прежняя копия останется нетронутой') && box.includes('обнови лаунчер там');
+        const texts = box.includes('Перевести облако на новый формат?') && box.includes('Прежняя копия только сверяется') && box.includes('обнови лаунчер там');
         q('#smNo').click(); await s(300);
         const cancelled = !q('#modal').classList.contains('open') && calls === 0;
         let seen = mark(); q('#syncMigrate').click(); await s(350); q('#smYes').click(); await s(700);
         const okToast = fresh(seen).some((t) => t.includes('Переведено сборок: 2'));
+        // остановка: второе окно с перечнем, без успеха; «Отмена» ничего не переводит; «Перевести без них» — второй вызов с force
+        mode = 'ahead'; seen = mark(); q('#syncMigrate').click(); await s(350); q('#smYes').click(); await s(700);
+        const stopToasts = fresh(seen);
+        const aheadBox = q('#modal').classList.contains('open') ? q('#modalBox').innerText : '';
+        const aheadShown = aheadBox.includes('Не всё переведено') && aheadBox.includes('мир «World»') && !!q('#saYes') && !stopToasts.some((t) => t.includes('Переведено сборок') || t.startsWith('Синхронизировано'));
+        q('#saNo').click(); await s(300);
+        const aheadCancelled = !q('#modal').classList.contains('open') && calls === 2;
+        seen = mark(); q('#syncMigrate').click(); await s(350); q('#smYes').click(); await s(700); q('#saYes').click(); await s(700);
+        const forced = forces.slice(-2).join() === 'false,true' && fresh(seen).some((t) => t.includes('Переведено сборок: 2'));
         mode = 'err'; seen = mark(); q('#syncMigrate').click(); await s(350); q('#smYes').click(); await s(700);
         const after = fresh(seen);
         const errOk = after.some((t) => t.includes('EPERM')) && !after.some((t) => t.includes('Переведено сборок'));
-        const r = { hiddenAt0, shownAt2, texts, cancelled, okToast, errOk, calls };
-        return hiddenAt0 && shownAt2 && texts && cancelled && okToast && errOk && calls === 2 ? r : 'EXC ' + JSON.stringify(r);
+        const r = { hiddenAt0, shownAt2, texts, cancelled, okToast, aheadShown, aheadCancelled, forced, errOk, calls };
+        return hiddenAt0 && shownAt2 && texts && cancelled && okToast && aheadShown && aheadCancelled && forced && errOk && calls === 5 ? r : 'EXC ' + JSON.stringify(r);
       } finally { window.call = o2; state.sync = oSync; renderSync(); closeModal(); await s(300); }`],
     ['место на диске', `showPage('settings'); await scanStorage(); await s(1500); showPage('instances'); return 1`],
     ['страницы по кругу', `for (const p of ['mods', 'accounts', 'settings', 'console', 'instances']) { showPage(p); await s(500); } return document.body.dataset.page`],

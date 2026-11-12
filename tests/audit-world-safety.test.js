@@ -16,7 +16,7 @@ function fixture(t) {
   const put = (dir, rel, value) => { const dest = path.join(dir, rel); fs.mkdirSync(path.dirname(dest), { recursive: true }); fs.writeFileSync(dest, value); };
   const mocks = {
     './store': { get: () => ({ settings: { syncDir: cloudDir, cfApiKey: 'test-only' } }), save() {} },
-    './instances': { dirOf: () => local, gameDir: () => local, list: () => [{ id: 'test' }] },
+    './instances': { dirOf: () => local, gameDir: () => local, list: () => [{ id: 'test' }], get: () => ({ id: 'test', name: 'test' }) },
     './trash': { has: () => false }, './fsx': require('../src/core/fsx'),
     './mods': {}, './modmeta': {}, './health': {}, 'adm-zip': class {},
   };
@@ -38,6 +38,9 @@ async function synced(t) {
   f.put(f.local, 'saves/World/region/r.0.0.mca', 'PLAYER_REGION');
   f.sync = f.load('sync');
   await f.sync.syncInstance('test');
+  // облачная копия — текущая линия по указателю v2/instances/test/line.json
+  const v2 = path.join(f.cloudDir, 'Femboy Launcher Sync', 'v2');
+  f.cloud = path.join(v2, 'lines', JSON.parse(fs.readFileSync(path.join(v2, 'instances', 'test', 'line.json'), 'utf8')).line);
   f.baseBefore = fs.readFileSync(path.join(f.local, 'sync-base.json'), 'utf8');
   return f;
 }
@@ -86,11 +89,16 @@ test('sync preserves normal new-file transfer and explicit local file removal', 
   assert.equal(fs.existsSync(path.join(f.cloud, 'config/local.txt')), false);
 });
 
-test('a completely absent cloud copy is safely recreated', async (t) => {
+test('a completely absent cloud copy stops sync without changes; restoring the cloud recreates it', async (t) => {
   const f = await synced(t);
   fs.rmSync(f.cloud, { recursive: true, force: true });
-  await f.sync.syncInstance('test');
-  assert.equal(fs.readFileSync(path.join(f.cloud, 'saves/World/level.dat'), 'utf8'), 'PLAYER_LEVEL');
+  // линия могла ещё не доехать с другого компьютера: ждём, а не создаём новую сами
+  await assert.rejects(f.sync.syncInstance('test'), /Облако ещё обновляется/);
+  assert.equal(fs.readFileSync(path.join(f.local, 'sync-base.json'), 'utf8'), f.baseBefore);
+  await f.sync.publishLocal('test');
+  const v2 = path.join(f.cloudDir, 'Femboy Launcher Sync', 'v2');
+  const line = JSON.parse(fs.readFileSync(path.join(v2, 'instances', 'test', 'line.json'), 'utf8')).line;
+  assert.equal(fs.readFileSync(path.join(v2, 'lines', line, 'saves/World/level.dat'), 'utf8'), 'PLAYER_LEVEL');
 });
 
 test('syncAll reports the rejected instance without counting it as successful', async (t) => {

@@ -255,7 +255,9 @@ test('облако: сборка в корзине не «возвращаетс
   fs.mkdirSync(cloudDir);
   p.store.updateSettings({ syncDir: cloudDir });
   assert.equal((await sync.syncAll()).instances >= 1, true, 'обычная синхронизация отдала сборки в облако');
-  const cloudCopy = path.join(cloudDir, sync.ROOT_NAME, sync.SPACE, 'instances', a.id);
+  // облачная копия — текущая линия по указателю v2/instances/<id>/line.json
+  const v2 = path.join(cloudDir, sync.ROOT_NAME, sync.SPACE);
+  const cloudCopy = path.join(v2, 'lines', JSON.parse(fs.readFileSync(path.join(v2, 'instances', a.id, 'line.json'), 'utf8')).line);
   assert.ok(fs.existsSync(path.join(cloudCopy, 'instance.json')));
 
   trash.move(a.id);

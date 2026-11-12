@@ -336,16 +336,28 @@
     'Восстановить облако с этого компьютера…': 'Restore the cloud from this computer…', 'Восстановить облако с этого компьютера?': 'Restore the cloud from this computer?',
     'Выход, если облако застряло на «Облако ещё обновляется»': 'A way out when the cloud is stuck on “The cloud is still updating”',
     'Восстановить облако': 'Restore the cloud',
-    'Изменения, которые другой компьютер уже отдал в облако, а здесь их нет, будут заменены и на нём; они останутся в прежней облачной копии в «Корзине». Изменения, которые он ещё не отдал, не пропадут: при его следующей синхронизации они уйдут в облако, а если одно и то же изменили оба компьютера, обе версии сохранятся рядом.':
-      'Changes the other computer has already uploaded but this one does not have will be replaced on it too; they stay in the previous cloud copy in “Корзина”. Changes it has not uploaded yet will not be lost: on its next sync they go to the cloud, and if both computers changed the same thing, both versions are kept side by side.',
+    'На другом компьютере ничего не перезапишется: где его сборка отличается от этой, при его следующей синхронизации обе версии сохранятся рядом (конфликтная копия) и уйдут в облако.':
+      'Nothing will be overwritten on the other computer: wherever its instance differs from this one, both versions are kept side by side (a conflict copy) on its next sync and go to the cloud.',
     // «Перевести облако на новый формат» (sync.migrate)
     'Перевести облако на новый формат…': 'Move the cloud to the new format…', 'Перевести облако на новый формат?': 'Move the cloud to the new format?',
     'Нужно один раз после обновления лаунчера': 'Needed once after updating the launcher', 'Перевести': 'Move', 'Перевожу облако на новый формат…': 'Moving the cloud to the new format…',
-    'Лаунчер скопирует сборки из прежней папки облака в новую («v2» в папке «Femboy Launcher Sync») и сверит их с этим компьютером. Прежняя копия останется нетронутой, в облаке понадобится ещё столько же места.':
-      'The launcher will copy the instances from the previous cloud folder to a new one (“v2” inside “Femboy Launcher Sync”) and reconcile them with this computer. The previous copy stays untouched; the cloud will need the same amount of space again.',
-    'Лаунчеры 0.10.2 и раньше на других компьютерах перестанут синхронизировать эти сборки — обнови лаунчер там. Их несинхронизированные изменения не пропадут: после обновления они уйдут в облако, а если одно и то же изменили оба компьютера, обе версии сохранятся рядом.':
-      'Launchers 0.10.2 and older on other computers will stop syncing these instances — update the launcher there. Their unsynced changes will not be lost: after the update they go to the cloud, and if both computers changed the same thing, both versions are kept side by side.',
-    'Перед переводом закрой лаунчер на других компьютерах и дождись, пока программа облака закончит синхронизацию.': 'Before moving, close the launcher on other computers and wait until the cloud app finishes syncing.',
+    'Лаунчер отдаст сборки с этого компьютера в новую папку облака («v2» в папке «Femboy Launcher Sync»). Прежняя копия только сверяется и остаётся нетронутой; в облаке понадобится ещё столько же места.':
+      'The launcher will upload the instances from this computer to a new cloud folder (“v2” inside “Femboy Launcher Sync”). The previous copy is only compared and stays untouched; the cloud will need the same amount of space again.',
+    'Если в прежней папке есть изменения другого компьютера, которых нет здесь, такая сборка не переводится: лаунчер покажет, что именно отличается.':
+      'If the previous folder has changes from another computer that this one does not have, that instance is not moved: the launcher shows what exactly differs.',
+    'Лаунчеры 0.10.2 и раньше на других компьютерах перестанут синхронизировать переведённые сборки — обнови лаунчер там. Их изменения не пропадут: после обновления, где сборки отличаются, обе версии сохранятся рядом.':
+      'Launchers 0.10.2 and older on other computers will stop syncing the moved instances — update the launcher there. Their changes will not be lost: after the update, wherever the instances differ, both versions are kept side by side.',
+    'Не всё переведено': 'Not everything was moved', 'В прежней папке облака есть изменения другого компьютера': 'The previous cloud folder has changes from another computer',
+    'Лучше обнови лаунчер на том компьютере и переведи облако оттуда: тогда его изменения попадут в новую папку.': 'Better update the launcher on that computer and move the cloud from there: then its changes will get into the new folder.',
+    'Если перевести отсюда, эти изменения в новую папку не попадут: они останутся в прежней папке облака и на том компьютере, а после обновления лаунчера там сохранятся рядом как конфликтные копии.':
+      'If you move from here, these changes will not get into the new folder: they stay in the previous cloud folder and on that computer, and after the launcher is updated there they are kept side by side as conflict copies.',
+    'Перевести без них': 'Move without them',
+    'Сборка есть только в прежней папке облака. Перевести её может компьютер, на котором она есть, после обновления лаунчера там. Ничего не изменено.':
+      'The instance exists only in the previous cloud folder. The computer that has it can move it after the launcher is updated there. Nothing was changed.',
+    'Файлы сборки на этом компьютере менялись во время отдачи в облако (например, шла игра). Облако не изменено, ничего не потеряно; закрой игру и повтори.':
+      'The instance files on this computer changed while uploading to the cloud (for example, the game was running). The cloud was not changed and nothing was lost; close the game and try again.',
+    'Эту сборку уже перевёл или восстановил другой компьютер: облачная копия взята оттуда, отличия этого компьютера сохранены рядом как конфликтные копии.':
+      'Another computer has already moved or restored this instance: the cloud copy comes from there, and this computer’s differences are kept side by side as conflict copies.',
     'Облако ещё в старом формате (лаунчер 0.10.2 и раньше), синхронизация приостановлена. Ничего не изменено; нажми «Перевести облако на новый формат…» в настройках синхронизации.':
       'The cloud is still in the old format (launcher 0.10.2 and older), sync is paused. Nothing was changed; click “Move the cloud to the new format…” in the sync settings.',
     'Прежняя копия сборки в облаке менялась во время перевода (на другом компьютере ещё работает старый лаунчер или программа облака не докачала файлы). Перевод не закончен, ничего не потеряно; закрой лаунчер на других компьютерах, подожди, пока программа облака закончит, и повтори.':
@@ -1120,6 +1132,9 @@
     [/^Для «(.+)» нашлось обновлений: (\d+)\.(.*)$/, (m, n, c, rest) => `Found ${c} updates for “${n}”.${tr(rest.trim()) ? ' ' + tr(rest.trim()) : ''}`],
     [/^Освобождено (.+) ♡$/, 'Freed $1 ♡'],
     [/^Переведено сборок: (\d+) ♡ Обнови лаунчер на других компьютерах$/, 'Instances moved to the new format: $1 ♡ Update the launcher on your other computers'],
+    [/^Прежняя облачная копия занята другой программой и осталась в папке облака: (.+)\. Облако восстановлено\.$/, 'The previous cloud copy is in use by another program and stayed in the cloud folder: $1. The cloud was restored.'],
+    [/^в прежней папке облака есть изменения с другого компьютера, которых нет здесь: (.+)\. Сборка не переведена, ничего не изменено\.$/, (m, what) =>
+      `the previous cloud folder has changes from another computer that this one does not have: ${what.replace(/мир «([^»]*)»/g, 'world “$1”').replace(/файл «([^»]*)»/g, 'file “$1”').replace(/ и другие$/, ' and others')}. The instance was not moved; nothing was changed.`],
     [/^Сборка следует за сборкой друга \(обновлена (.+)\)\. Нажми и вставь новый код от друга, чтобы обновиться$/, 'This instance follows a friend’s pack (updated $1). Click and paste the friend’s new code to update'],
     [/^Одинаковых файлов: (\d+), освободится (.+)$/, 'Identical files: $1, will free $2'],
     [/^Объединить одинаковые моды \(освободится (.+)\)\? Названия и содержимое файлов останутся прежними; у сборок, где идёт игра, моды не трогаются\.$/, 'Merge identical mods (will free $1)? Names and file contents stay the same; mods of instances with a running game are left alone.'],

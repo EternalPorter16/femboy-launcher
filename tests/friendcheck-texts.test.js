@@ -6,7 +6,7 @@ const assert = require('node:assert/strict');
 const fs = require('fs');
 const { src } = require('./helpers');
 
-const read = (rel) => fs.readFileSync(src(rel), 'utf8');
+const read = (rel) => fs.readFileSync(src(rel), 'utf8').replace(/\r\n/g, '\n'); // копия git с core.autocrlf=true даёт CRLF
 const core = read('core/friendcheck.js');
 const probes = read('core/netprobe.js');
 const ui = read('renderer/app/friends.js');
