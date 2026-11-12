@@ -11,7 +11,7 @@ function fixture(t) {
   t.after(() => { assert.ok(path.basename(root).startsWith('femboy-world-safety-')); fs.rmSync(root, { recursive: true, force: true }); });
   const local = path.join(root, 'local');
   const cloudDir = path.join(root, 'cloud');
-  const cloud = path.join(cloudDir, 'Femboy Launcher Sync', 'instances', 'test');
+  const cloud = path.join(cloudDir, 'Femboy Launcher Sync', 'v2', 'instances', 'test');
   fs.mkdirSync(local, { recursive: true });
   const put = (dir, rel, value) => { const dest = path.join(dir, rel); fs.mkdirSync(path.dirname(dest), { recursive: true }); fs.writeFileSync(dest, value); };
   const mocks = {

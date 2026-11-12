@@ -36,7 +36,7 @@ function tree(dir, rel = '', out = []) {
   } catch {}
   for (const e of list) {
     const r = rel ? `${rel}/${e.name}` : e.name;
-    if (!rel && ['instance.json', 'sync-base.json', 'sync-wait.json', '.femboy-sync.json', 'backups'].includes(e.name)) continue;
+    if (!rel && ['instance.json', 'sync-base.json', 'sync-wait.json', '.femboy-sync.json', '.femboy-origin.json', 'backups'].includes(e.name)) continue;
     if (e.isDirectory()) tree(path.join(dir, e.name), r, out);
     else out.push(`${r}=${fs.readFileSync(path.join(dir, e.name), 'utf8')}`);
   }
@@ -72,7 +72,7 @@ function env(t, { populate = true } = {}) {
   };
   e.L = (k, ...p) => (e.use(k), path.join(inst.dirOf(e.id), ...p));
   e.G = (k, ...p) => e.L(k, '.minecraft', ...p);
-  e.C = (...p) => path.join(cloud, sync.ROOT_NAME, 'instances', e.id, ...p);
+  e.C = (...p) => path.join(cloud, sync.ROOT_NAME, sync.SPACE, 'instances', e.id, ...p);
   e.sync = async (k, running) => (e.use(k), sync.syncAll(running));
   e.one = async (k) => (e.use(k), sync.syncInstance(e.id));
   e.status = (k) => (e.use(k), sync.status());
@@ -431,7 +431,7 @@ test('явный выход: publishLocal отдаёт наше состояни
   assert.deepEqual(r.conflicts, []);
   assert.equal(R(e.C('.minecraft', 'options.txt')), 'opt-B');
   assert.equal(R(e.C('.minecraft', 'config', 'x.toml')), 'cfg-v0');
-  assert.equal(fs.readdirSync(path.join(e.cloud, sync.ROOT_NAME, 'Корзина')).length, 1);
+  assert.equal(fs.readdirSync(path.join(e.cloud, sync.ROOT_NAME, sync.SPACE, 'Корзина')).length, 1);
   assert.equal(R(WORLD(e, 'B', 'level.dat')), 'level.dat:v0');
 });
 
@@ -924,7 +924,7 @@ test('восстановление облака (IPC): успех только �
 test('publishLocal не трогает облако, если отдача не состоится: корзина, удалена на другом ПК, обновление модпака, нет папки облака', async (t) => {
   const e = await both(t);
   const cloud0 = tree(e.C());
-  const bin = path.join(e.cloud, sync.ROOT_NAME, 'Корзина');
+  const bin = path.join(e.cloud, sync.ROOT_NAME, sync.SPACE, 'Корзина');
   e.use('B');
   const baseB = R(e.L('B', 'sync-base.json'));
   // обновление модпака не завершено
@@ -932,7 +932,7 @@ test('publishLocal не трогает облако, если отдача не 
   await assert.rejects(sync.publishLocal(e.id), /обновление модпака/);
   fs.rmSync(e.L('B', '.pack-update'), { recursive: true });
   // сборка удалена на другом компьютере (tombstone)
-  const tomb = path.join(e.cloud, sync.ROOT_NAME, 'deleted', e.id);
+  const tomb = path.join(e.cloud, sync.ROOT_NAME, sync.SPACE, 'deleted', e.id);
   W(tomb, String(Date.now()));
   await assert.rejects(sync.publishLocal(e.id), /удалена на другом компьютере/);
   rm(tomb);
@@ -975,7 +975,7 @@ test('publishLocal: перенос облачной копии в Корзину
     fs.renameSync = real;
   }
   assert.deepEqual(tree(e.C()), cloud0);
-  const bin = path.join(e.cloud, sync.ROOT_NAME, 'Корзина');
+  const bin = path.join(e.cloud, sync.ROOT_NAME, sync.SPACE, 'Корзина');
   assert.deepEqual(fs.existsSync(bin) ? fs.readdirSync(bin) : [], [], 'в Корзину ничего не ушло');
   assert.equal(R(e.L('B', 'sync-base.json')), base0);
   assert.equal(e.status('B').at, at0);
@@ -1060,7 +1060,7 @@ test('английский перевод новых сообщений синх
     'Восстановить облако с этого компьютера?',
     'Выход, если облако застряло на «Облако ещё обновляется»',
     'Состояние сборки «My pack» на этом компьютере станет новым облачным состоянием. Прежняя облачная копия сохранится в корзине синхронизации: папка «Корзина» в папке облака.',
-    'Изменения, которые другой компьютер ещё не отдал в облако, у него не пропадут: при его следующей синхронизации они уйдут в облако, а если одно и то же изменили оба компьютера, обе версии сохранятся рядом.',
+    'Изменения, которые другой компьютер уже отдал в облако, а здесь их нет, будут заменены и на нём; они останутся в прежней облачной копии в «Корзине». Изменения, которые он ещё не отдал, не пропадут: при его следующей синхронизации они уйдут в облако, а если одно и то же изменили оба компьютера, обе версии сохранятся рядом.',
     'Сборка «My pack» сейчас запущена: сначала закрой игру.',
     'Восстановить облако',
     'Облако восстановлено с этого компьютера: «My pack» ♡',
@@ -1068,7 +1068,336 @@ test('английский перевод новых сообщений синх
     'Сначала дождись восстановления облака',
     'Облако не восстановлено: синхронизация этой сборки сейчас невозможна',
     'Сначала закрой игру и дождись завершения задач сборки',
+    // перевод облака на новый формат
+    ...[...fs.readFileSync(path.join(__dirname, '../src/renderer/app/sync-hardware.js'), 'utf8').matchAll(/<(?:h2|p class="(?:sub|hint)"|button class="btn \w+" id="sm\w+")>([^<$]*[А-Яа-я][^<$]*)</g)].map((m) => m[1]),
+    'Перевести облако на новый формат…',
+    'Перевожу облако на новый формат…',
+    'Переведено сборок: 2 ♡ Обнови лаунчер на других компьютерах',
+    '«My pack», «Second»: Облако ещё в старом формате (лаунчер 0.10.2 и раньше), синхронизация приостановлена. Ничего не изменено; нажми «Перевести облако на новый формат…» в настройках синхронизации.',
+    'Синхронизация не удалась: Облако ещё в старом формате (лаунчер 0.10.2 и раньше), синхронизация приостановлена. Ничего не изменено; нажми «Перевести облако на новый формат…» в настройках синхронизации.',
   ];
   // имя папки конфликтного мира и папка «Корзина» в облаке — настоящие имена папок, остаются как есть
   for (const s of samples) assert.doesNotMatch(tr(s).replace(/(конфликт [^)]*)/g, '').replace(/“Корзина”/g, ''), /[А-Яа-яЁё]/, s);
+});
+
+// ---------- смешанные версии: опубликованная 0.10.2 и новая ----------
+// «Старый компьютер» — настоящий модуль синхронизации опубликованной 0.10.2 без изменений: tests/sync-0.10.2-fixture.js
+// = src/core/sync.js из её app.asar (app.asar SHA-256 29fca49c…483b67, файл SHA-256 6f8ab036…6e48). Он подключается к тем же
+// store/instances/trash, что и новый модуль: компьютер = профиль (e.use), версия лаунчера = модуль
+const OLD = (() => {
+  const module = { exports: {} };
+  const map = { './store': store, './instances': inst, './trash': require('../src/core/trash') };
+  const code = fs.readFileSync(path.join(__dirname, 'sync-0.10.2-fixture.js'), 'utf8');
+  vm.runInThisContext(`(function (module, exports, require) {${code}\n})`)(module, module.exports, (n) => map[n] || require(n));
+  return module.exports;
+})();
+
+// 0.10.2 на A и B: сборка создана на A, оба компьютера синхронны в прежней папке облака
+async function legacyBoth(t) {
+  const e = env(t);
+  e.old = async (k) => (e.use(k), OLD.syncAll());
+  e.migrate = async (k) => (e.use(k), sync.migrate());
+  e.P = (...p) => path.join(e.cloud, sync.ROOT_NAME, 'instances', e.id, ...p);
+  e.fence = path.join(e.cloud, sync.ROOT_NAME, 'deleted', e.id);
+  assert.deepEqual((await e.old('A')).errors, []);
+  assert.deepEqual((await e.old('B')).errors, []);
+  assert.deepEqual(tree(e.L('B')), tree(e.L('A')));
+  return e;
+}
+// Всё, что видно на компьютере k: файлы сборки, база синхронизации
+const pcState = (e, k) => [tree(e.L(k)), R(e.L(k, 'sync-base.json'))];
+// Подмена fsx.writeJsonAtomic: бросает на n-й записи подходящего файла, потом возвращает как было
+function patchJson(match, n = 1) {
+  const real = fsx.writeJsonAtomic;
+  let i = 0;
+  fsx.writeJsonAtomic = (f, ...a) => {
+    if (match(f) && ++i === n) throw new Error('fixture: write interrupted');
+    return real(f, ...a);
+  };
+  return () => (fsx.writeJsonAtomic = real);
+}
+
+test('MIX-1: после обновления прежняя папка без явного перевода не трогается; «Восстановить облако» тоже отказывает, ничего не перенося', async (t) => {
+  const e = await legacyBoth(t);
+  const P0 = tree(e.P());
+  const A0 = pcState(e, 'A');
+  const r = await e.sync('A');
+  assert.deepEqual(r.errors, ['«Моя сборка»: Облако ещё в старом формате (лаунчер 0.10.2 и раньше), синхронизация приостановлена. Ничего не изменено; нажми «Перевести облако на новый формат…» в настройках синхронизации.']);
+  await assert.rejects(e.one('A'), (err) => err.code === 'CLOUD_LEGACY');
+  e.use('A');
+  await assert.rejects(sync.publishLocal(e.id), (err) => err.code === 'CLOUD_LEGACY');
+  assert.equal(e.status('A').legacy, 1);
+  assert.deepEqual(tree(e.P()), P0);
+  assert.deepEqual(pcState(e, 'A'), A0);
+  assert.equal(fs.existsSync(e.fence), false, 'ограды нет');
+  assert.equal(fs.existsSync(e.C()), false, 'в новой папке ничего нет');
+  // база протокола 2 до перевода (сборки 12be080/d268896) с поколением «из будущего» и манифест в прежней папке не мешают
+  const bf = e.L('A', 'sync-base.json');
+  fsx.writeJsonAtomic(bf, { ...JSON.parse(R(bf)), v: 2, gen: Date.now() + 1e9 }, false);
+  fsx.writeJsonAtomic(e.P('.femboy-sync.json'), { v: 2, gen: Date.now() + 1e9, files: {}, deleted: {} }, false);
+  const m = await e.migrate('A');
+  assert.deepEqual([m.errors, m.migrated], [[], 1]);
+  assert.deepEqual((await e.sync('A')).errors, []);
+  assert.deepEqual(tree(e.C()), P0);
+});
+
+test('MIX-2: перевод: ограда до первого файла новой папки, новая = прежней, прежняя не изменилась; 0.10.2 за оградой ничего не отдаёт, не забирает и не удаляет', async (t) => {
+  const e = await legacyBoth(t);
+  const P0 = tree(e.P());
+  let fenceFirst = null;
+  const real = fs.promises.copyFile;
+  fs.promises.copyFile = async (from, to) => {
+    if (fenceFirst === null && to.startsWith(path.join(e.cloud, sync.ROOT_NAME, sync.SPACE))) fenceFirst = fs.existsSync(e.fence);
+    return real(from, to);
+  };
+  let r;
+  try {
+    r = await e.migrate('A');
+  } finally {
+    fs.promises.copyFile = real;
+  }
+  assert.deepEqual([r.errors, r.migrated], [[], 1]);
+  assert.equal(fenceFirst, true, 'ограда стоит до первого файла новой папки');
+  assert.equal(JSON.parse(R(e.fence)).fence, 'v2');
+  assert.deepEqual(tree(e.P()), P0, 'прежняя копия не изменилась');
+  assert.deepEqual(tree(e.C()), P0);
+  assert.deepEqual(tree(e.L('A')), P0);
+  assert.equal(e.status('A').legacy, 0);
+  // B (0.10.2) правит, удаляет и синхронизирует: за оградой ничего не происходит
+  W(WORLD(e, 'B', 'level.dat'), 'level.dat:B', T0 + 60000);
+  W(e.G('B', 'mods', 'b.jar'), 'JAR-B', T0 + 60000);
+  rm(e.G('B', 'mods', 'keep.jar'));
+  const B0 = pcState(e, 'B');
+  const C0 = tree(e.C());
+  const ro = await e.old('B');
+  assert.deepEqual([ro.errors, ro.instances, ro.up, ro.down, ro.removed], [[], 0, 0, 0, 0]);
+  e.use('B');
+  assert.equal(await OLD.syncInstance(e.id), null);
+  assert.deepEqual(pcState(e, 'B'), B0);
+  assert.deepEqual(tree(e.P()), P0);
+  assert.deepEqual(tree(e.C()), C0);
+  // A не застревает и чужих правок не видит
+  const ra = await e.sync('A');
+  assert.deepEqual([ra.errors, ra.warnings], [[], []]);
+  assert.deepEqual(tree(e.L('A')), P0);
+  // сборка, созданная новой версией, до 0.10.2 не доходит
+  e.use('A');
+  const id2 = inst.create({ name: 'Новая', version: '1.20.1' }).id;
+  assert.deepEqual((await e.sync('A')).errors, []);
+  assert.deepEqual((await e.old('B')).errors, []);
+  e.use('B');
+  assert.equal(fs.existsSync(inst.dirOf(id2)), false);
+  assert.equal(fs.existsSync(path.join(e.cloud, sync.ROOT_NAME, 'instances', id2)), false);
+});
+
+test('MIX-3: старый ПК обновился позже: его неотданные правки и удаления и правки нового ПК сохраняются, миры не смешиваются', async (t) => {
+  const e = await legacyBoth(t);
+  assert.deepEqual((await e.migrate('A')).errors, []);
+  // A (новая): мир, options, новый мод, удалён keep.jar
+  W(WORLD(e, 'A', 'region', 'r.0.0.mca'), 'r00:A', T0 + 60000);
+  W(e.G('A', 'options.txt'), 'opt-A', T0 + 60000);
+  W(e.G('A', 'mods', 'a.jar'), 'JAR-A', T0 + 60000);
+  rm(e.G('A', 'mods', 'keep.jar'));
+  assert.deepEqual((await e.sync('A')).errors, []);
+  // B (0.10.2, за оградой): тот же мир, options, свой мод, удалён toggle.jar
+  W(WORLD(e, 'B', 'region', 'r.1.0.mca'), 'r10:B', T0 + 90000);
+  W(e.G('B', 'options.txt'), 'opt-B', T0 + 90000);
+  W(e.G('B', 'mods', 'b.jar'), 'JAR-B', T0 + 90000);
+  rm(e.G('B', 'mods', 'toggle.jar'));
+  assert.deepEqual((await e.old('B')).errors, []);
+  // B обновился
+  const rb = await e.sync('B');
+  assert.deepEqual(rb.errors, []);
+  assert.equal(R(e.G('B', 'options.txt')), 'opt-B');
+  assert.deepEqual(find(e.G('B'), /^options\.txt\.sync-conflict-/).map(R), ['opt-A']);
+  const worlds = fs.readdirSync(e.G('B', 'saves')).sort();
+  assert.equal(worlds.length, 2);
+  assert.match(worlds[1], /^World \(конфликт /);
+  const v0 = (f) => `${f}=${f}:v0`;
+  assert.deepEqual(tree(WORLD(e, 'B')), [v0('data/scoreboard.dat'), v0('level.dat'), v0('playerdata/u1.dat'), v0('region/r.0.0.mca'), 'region/r.1.0.mca=r10:B'], 'мир B целиком его');
+  assert.deepEqual(tree(e.G('B', 'saves', worlds[1])), [v0('data/scoreboard.dat'), v0('level.dat'), v0('playerdata/u1.dat'), 'region/r.0.0.mca=r00:A', v0('region/r.1.0.mca')], 'копия рядом — целиком мир A');
+  assert.deepEqual(names(e.G('B', 'mods')), ['a.jar', 'b.jar', 'old.jar']);
+  assert.deepEqual(removedBy(e, 'B'), ['keep.jar'], 'удаление с A принято, файл перемещён, а не стёрт');
+  // A догоняет: одинаково, ни одна правка не потеряна
+  assert.deepEqual((await e.sync('A')).errors, []);
+  assert.deepEqual(removedBy(e, 'A'), ['toggle.jar']);
+  assert.deepEqual(tree(e.L('A')), tree(e.L('B')));
+  const all = tree(e.L('A')).join('\n');
+  for (const s of ['opt-A', 'opt-B', 'r00:A', 'r10:B', 'JAR-A', 'JAR-B']) assert.ok(all.includes(s), s);
+});
+
+test('MIX-4: 0.10.2 начал проход до ограды и дописал прежнюю папку после перевода: новый не застревает, поздние правки после обновления старого — конфликт рядом, а не перезапись', async (t) => {
+  const e = await legacyBoth(t);
+  W(e.G('B', 'mods', 'b.jar'), 'JAR-B', T0 + 60000);
+  W(WORLD(e, 'B', 'region', 'r.0.0.mca'), 'r00:B', T0 + 60000);
+  // B уже прошёл проверку ограды; перед его первой записью A делает перевод целиком
+  const real = fs.promises.copyFile;
+  let fired = false;
+  fs.promises.copyFile = async (...a) => {
+    if (!fired) {
+      fired = true;
+      const m = await e.migrate('A');
+      assert.deepEqual(m.errors, []);
+      e.use('B');
+    }
+    return real(...a);
+  };
+  try {
+    assert.deepEqual((await e.old('B')).errors, []);
+  } finally {
+    fs.promises.copyFile = real;
+  }
+  assert.ok(fired);
+  assert.equal(R(e.P('.minecraft', 'mods', 'b.jar')), 'JAR-B', 'поздняя запись старого — только в прежней папке');
+  assert.equal(R(e.C('.minecraft', 'mods', 'b.jar')), '<нет>');
+  assert.equal(R(e.C('.minecraft', 'saves', 'World', 'region', 'r.0.0.mca')), 'region/r.0.0.mca:v0');
+  assert.deepEqual((await e.sync('A')).errors, [], 'новый не застревает');
+  const B0 = pcState(e, 'B');
+  await e.old('B');
+  assert.deepEqual(pcState(e, 'B'), B0, 'дальше 0.10.2 за оградой');
+  W(WORLD(e, 'A', 'level.dat'), 'level.dat:A', T0 + 120000);
+  assert.deepEqual((await e.sync('A')).errors, []);
+  // B обновился: его мир остаётся его, мир A — рядом; мод доходит
+  const rb = await e.sync('B');
+  assert.deepEqual(rb.errors, []);
+  const worlds = fs.readdirSync(e.G('B', 'saves')).sort();
+  assert.equal(worlds.length, 2);
+  assert.equal(R(WORLD(e, 'B', 'region', 'r.0.0.mca')), 'r00:B');
+  assert.equal(R(WORLD(e, 'B', 'level.dat')), 'level.dat:v0');
+  assert.equal(R(e.G('B', 'saves', worlds[1], 'level.dat')), 'level.dat:A');
+  assert.equal(R(e.G('B', 'saves', worlds[1], 'region', 'r.0.0.mca')), 'region/r.0.0.mca:v0');
+  assert.equal(R(e.C('.minecraft', 'mods', 'b.jar')), 'JAR-B');
+  assert.deepEqual((await e.sync('A')).errors, []);
+  assert.deepEqual(tree(e.L('A')), tree(e.L('B')));
+});
+
+test('MIX-5: обрыв перевода на каждом шаге: 0.10.2 ничего не меняет, другой новый ждёт, повтор доводит до конца без потерь', async (t) => {
+  const steps = [
+    ['ограда', (e) => patchJson((f) => f === e.fence)],
+    ['копия 1', () => failCopyAt(1)],
+    ['копия 4', () => failCopyAt(4)],
+    ['копия 8', () => failCopyAt(8)],
+    ['снимок-основание', (e) => patchJson((f) => f === e.C('.femboy-origin.json'))],
+    ['манифест', (e) => patchJson((f) => f === e.C('.femboy-sync.json'), 2)],
+    ['база после перевода', (e) => patchJson((f) => f === e.L('A', 'sync-base.json'))],
+  ];
+  for (const [step, inject] of steps) {
+    const e = await legacyBoth(t);
+    const P0 = tree(e.P());
+    const files = (k) => [tree(e.L(k)), JSON.parse(R(e.L(k, 'sync-base.json'))).files]; // без ограды 0.10.2 законно синхронизируется: меняется только время базы
+    const B0 = files('B');
+    e.use('A');
+    const restore = inject(e);
+    let r;
+    try {
+      r = await sync.migrate();
+    } finally {
+      restore();
+    }
+    assert.equal(r.errors.length, 1, `${step}: перевод прервался`);
+    assert.deepEqual(tree(e.P()), P0, `${step}: прежняя копия цела`);
+    // 0.10.2: ничего не меняет ни у себя, ни в облаке
+    await e.old('B');
+    assert.deepEqual(files('B'), B0, `${step}: старый ПК не изменился`);
+    assert.deepEqual(tree(e.P()), P0, `${step}: старый не тронул прежнюю копию`);
+    // третий компьютер с новой версией ждёт (кроме обрыва уже после перевода) и сборку не забирает
+    const rc = await e.sync('C');
+    if (step === 'база после перевода') assert.deepEqual(rc.errors, []);
+    else {
+      assert.match(rc.errors.join('\n'), /Облако ещё обновляется/, step);
+      assert.equal(fs.existsSync(e.L('C')), false, `${step}: у C сборка не появилась`);
+    }
+    // повтор обычной синхронизацией на A доводит перевод
+    const again = await e.sync('A');
+    assert.deepEqual(again.errors, [], step);
+    assert.deepEqual(tree(e.C()), P0, step);
+    assert.deepEqual(tree(e.L('A')), P0, step);
+    assert.equal(JSON.parse(R(e.fence)).fence, 'v2', step);
+    assert.deepEqual((await e.sync('C')).errors, [], step);
+    assert.deepEqual(tree(e.L('C')), P0, step);
+  }
+});
+
+test('MIX-6: прежняя копия меняется во время снимка — перевод не засчитан, новая папка закрыта, повтор берёт новое состояние', async (t) => {
+  const e = await legacyBoth(t);
+  const real = fs.promises.copyFile;
+  let n = 0;
+  fs.promises.copyFile = async (from, to) => {
+    if (++n === 2) W(e.P('.minecraft', 'saves', 'World', 'level.dat'), 'level.dat:late', T0 + 5000);
+    return real(from, to);
+  };
+  let r;
+  try {
+    r = await e.migrate('A');
+  } finally {
+    fs.promises.copyFile = real;
+  }
+  assert.match(r.errors.join('\n'), /менялась во время перевода/);
+  assert.equal(JSON.parse(R(e.C('.femboy-sync.json'))).pending.migrate, true, 'новая папка помечена: другие её не трогают');
+  assert.match((await e.sync('C')).errors.join('\n'), /Облако ещё обновляется/);
+  assert.deepEqual((await e.sync('A')).errors, []);
+  assert.equal(R(e.C('.minecraft', 'saves', 'World', 'level.dat')), 'level.dat:late');
+  assert.equal(R(WORLD(e, 'A', 'level.dat')), 'level.dat:late');
+});
+
+test('MIX-7: ограда — не удаление; настоящее удаление на 0.10.2 или на новой версии рядом с оградой ничего не стирает', async (t) => {
+  const e = await legacyBoth(t);
+  assert.deepEqual((await e.migrate('A')).errors, []);
+  assert.deepEqual((await e.sync('A')).warnings, [], 'ограда не принята за удаление');
+  // 0.10.2 удалил сборку у себя навсегда (forget): ограда стала настоящим удалением
+  e.use('B');
+  OLD.forget(e.id);
+  assert.match(R(e.fence), /^\d+$/);
+  const A0 = pcState(e, 'A');
+  const C0 = tree(e.C());
+  const r = await e.sync('A');
+  assert.deepEqual(r.errors, []);
+  assert.match(r.warnings.join('\n'), /сборка удалена на другом компьютере/);
+  assert.deepEqual(pcState(e, 'A'), A0);
+  assert.deepEqual(tree(e.C()), C0, 'новая копия не тронута');
+  // новая версия удаляет переведённую сборку: обе облачные копии уходят в «Корзину» своих папок, 0.10.2 её не воскрешает
+  const f = await legacyBoth(t);
+  assert.deepEqual((await f.migrate('A')).errors, []);
+  const P0 = tree(f.P());
+  f.use('A');
+  sync.forget(f.id);
+  assert.equal(fs.existsSync(f.C()), false);
+  assert.equal(fs.existsSync(f.P()), false);
+  assert.match(R(f.fence), /^\d+$/);
+  assert.ok(fs.existsSync(path.join(f.cloud, sync.ROOT_NAME, sync.SPACE, 'deleted', f.id)));
+  const bins = [path.join(f.cloud, sync.ROOT_NAME, sync.SPACE, 'Корзина'), path.join(f.cloud, sync.ROOT_NAME, 'Корзина')];
+  for (const b of bins) assert.deepEqual(tree(path.join(b, fs.readdirSync(b)[0])), P0);
+  const B0 = pcState(f, 'B');
+  await f.old('B');
+  assert.deepEqual(pcState(f, 'B'), B0);
+});
+
+test('MIX-8: «Восстановить облако» после перевода оставляет ограду и прежнюю копию; 0.10.2 по-прежнему за оградой', async (t) => {
+  const e = await legacyBoth(t);
+  assert.deepEqual((await e.migrate('A')).errors, []);
+  const P0 = tree(e.P());
+  W(e.G('A', 'options.txt'), 'opt-A', T0 + 60000);
+  e.use('A');
+  const r = await sync.publishLocal(e.id);
+  assert.deepEqual(r.conflicts, []);
+  assert.equal(R(e.C('.minecraft', 'options.txt')), 'opt-A');
+  assert.equal(fs.readdirSync(path.join(e.cloud, sync.ROOT_NAME, sync.SPACE, 'Корзина')).length, 1);
+  assert.equal(JSON.parse(R(e.fence)).fence, 'v2');
+  assert.deepEqual(tree(e.P()), P0);
+  const B0 = pcState(e, 'B');
+  await e.old('B');
+  assert.deepEqual(pcState(e, 'B'), B0);
+});
+
+test('окно: кнопка «Перевести облако на новый формат…» видна, только когда есть что переводить, и вызывает перевод только после подтверждения', () => {
+  const html = fs.readFileSync(path.join(__dirname, '../src/renderer/index.html'), 'utf8');
+  assert.match(html, /id="syncMigrate" hidden>Перевести облако на новый формат…</);
+  const hw = fs.readFileSync(path.join(__dirname, '../src/renderer/app/sync-hardware.js'), 'utf8');
+  assert.match(hw, /\$\('#syncMigrate'\)\.hidden = !\(s\.dir && s\.legacy\)/);
+  assert.equal((hw.match(/call\('sync:migrate'/g) || []).length, 1);
+  const yes = hw.slice(hw.indexOf("$('#smYes', box).onclick"));
+  assert.ok(yes.indexOf("call('sync:migrate'") > 0 && yes.indexOf("call('sync:migrate'") < yes.indexOf('Переведено сборок'));
+  const main = fs.readFileSync(path.join(__dirname, '../src/main.js'), 'utf8');
+  assert.match(main, /handle\('sync:migrate'[\s\S]{0,400}Сначала закрой игру/);
+  assert.doesNotMatch(main.replace(/handle\('sync:migrate'[\s\S]*?\n\}\);/, ''), /sync\.migrate\(/, 'перевод не вызывается автоматически');
 });
