@@ -21,6 +21,7 @@
     "test:electron": "node tests/electron/run.js",
     "test:electron-node": "node tests/electron-node.js",
     "test:ui": "node tests/ui/run.js",
+    "test:installer": "node tests/installer/run.js",
     "dist": "electron-builder --win",
     "dist:setup": "electron-builder --win nsis",
     "dist:portable": "electron-builder --win portable"
