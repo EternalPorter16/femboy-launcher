@@ -33,10 +33,22 @@ async function scenario(t) {
   return { p, id: first.id, gameDir, child, startedAt: Date.now() - 60000 };
 }
 
+// A busy Windows runner can legitimately hit the production OS-probe timeout.
+// Require a successful real identity probe within a bounded integration-test budget;
+// do not assume the first attempt can never take the documented fallback path.
+async function trackGame(live, s) {
+  const tracked = await until(async () => {
+    await live.track(s.id, { pid: s.child.pid, javaPath: process.execPath, gameDir: s.gameDir, startedAt: s.startedAt });
+    const rec = live.readAll()[s.id];
+    return Number.isFinite(rec?.procStart) && !!rec.cmdHash;
+  }, 15000);
+  assert.ok(tracked, 'Windows did not identify the synthetic child within the test budget');
+}
+
 test('запись создаётся; после «убийства лаунчера» процесс узнан, второй запуск отклонён, выход обработан, запись удалена', async (t) => {
   const s = await scenario(t);
   const one = restart(s.p);
-  await one.live.track(s.id, { pid: s.child.pid, javaPath: process.execPath, gameDir: s.gameDir, startedAt: s.startedAt });
+  await trackGame(one.live, s);
   const rec = one.live.readAll()[s.id];
   assert.equal(rec.pid, s.child.pid);
   assert.ok(Number.isFinite(rec.procStart) && rec.cmdHash && rec.gameDir === s.gameDir && rec.startedAt === s.startedAt);
@@ -65,7 +77,7 @@ test('запись создаётся; после «убийства лаунч�
 test('переиспользованный PID с другим временем запуска не принимается', async (t) => {
   const s = await scenario(t);
   const one = restart(s.p);
-  await one.live.track(s.id, { pid: s.child.pid, javaPath: process.execPath, gameDir: s.gameDir, startedAt: s.startedAt });
+  await trackGame(one.live, s);
   const all = one.live.readAll(); all[s.id].procStart -= 3600e3; // «в записи другой процесс с тем же PID»
   fs.writeFileSync(one.live.file(), JSON.stringify(all));
   const two = restart(s.p);
@@ -81,7 +93,7 @@ test('переиспользованный PID с другим временем 
 test('процесс с тем же PID, но другой папкой игры, не принимается', async (t) => {
   const s = await scenario(t);
   const one = restart(s.p);
-  await one.live.track(s.id, { pid: s.child.pid, javaPath: process.execPath, gameDir: s.gameDir, startedAt: s.startedAt });
+  await trackGame(one.live, s);
   const all = one.live.readAll(); all[s.id].gameDir = path.join(s.gameDir, 'other'); all[s.id].cmdHash = 'x';
   fs.writeFileSync(one.live.file(), JSON.stringify(all));
   const two = restart(s.p);
@@ -92,7 +104,7 @@ test('процесс с тем же PID, но другой папкой игры
 test('игра закрылась, пока лаунчера не было: запись убрана, время не начислено, дана возможность сделать работу после игры', async (t) => {
   const s = await scenario(t);
   const one = restart(s.p);
-  await one.live.track(s.id, { pid: s.child.pid, javaPath: process.execPath, gameDir: s.gameDir, startedAt: s.startedAt });
+  await trackGame(one.live, s);
   process.kill(s.child.pid);
   assert.ok(await until(() => !alive(s.child.pid)));
   const two = restart(s.p);
@@ -109,7 +121,7 @@ test('игра закрылась, пока лаунчера не было: за
 test('если ОС не ответила, запись сохраняется и игра не объявляется закрытой', async (t) => {
   const s = await scenario(t);
   const one = restart(s.p);
-  await one.live.track(s.id, { pid: s.child.pid, javaPath: process.execPath, gameDir: s.gameDir, startedAt: s.startedAt });
+  await trackGame(one.live, s);
   const two = restart(s.p);
   two.live.setProbe(async () => { throw new Error('powershell недоступен'); });
   const r = await two.game.recover({}, { pollMs: 150 });
@@ -164,7 +176,7 @@ test('граница пути gameDir в командной строке', () =>
 test('перед завершением подхваченной игры сверяется личность: сменившийся процесс не убивается, запись снимается', async (t) => {
   const s = await scenario(t);
   const one = restart(s.p);
-  await one.live.track(s.id, { pid: s.child.pid, javaPath: process.execPath, gameDir: s.gameDir, startedAt: s.startedAt });
+  await trackGame(one.live, s);
   const two = restart(s.p);
   const events = [];
   await two.game.recover({ closed: (id, code) => events.push(['closed', code]) }, { pollMs: 150 });
@@ -183,7 +195,7 @@ test('перед завершением подхваченной игры све
 test('kill подхваченной игры при совпавшей личности завершает процесс; при неответе ОС не завершает', async (t) => {
   const s = await scenario(t);
   const one = restart(s.p);
-  await one.live.track(s.id, { pid: s.child.pid, javaPath: process.execPath, gameDir: s.gameDir, startedAt: s.startedAt });
+  await trackGame(one.live, s);
   const two = restart(s.p);
   const events = [], warn = [];
   await two.game.recover({ closed: () => events.push('closed'), unverified: (ids) => warn.push(...ids) }, { pollMs: 150 });
@@ -207,4 +219,18 @@ test('запись без procStart: процесс, созданный заме
     live.setProbe(async () => ({ start: 1000000 + 60000, cmd: 'java --gameDir c:/g/a/.minecraft', name: 'java.exe' })); // тот же gameDir, но моложе игры
     assert.equal(await live.verify(rec), false);
   } finally { p.done(); }
+});
+
+test('track preserves an unverified record on OS timeout and enriches it after a successful probe', async (t) => {
+  const p = profile(); t.after(() => p.done()); const live = p.load('core/livegames');
+  const record = { pid: 4242, javaPath: 'synthetic-java', gameDir: 'C:/synthetic/game', startedAt: 1000 };
+  live.setProbe(async () => { throw Error('synthetic OS timeout'); });
+  await live.track('synthetic', record);
+  assert.equal(live.readAll().synthetic.procStart, null);
+  assert.equal(live.readAll().synthetic.cmdHash, null);
+  assert.equal(live.readAll().synthetic.pid, record.pid);
+  live.setProbe(async () => ({ start: 1000, cmd: 'synthetic-java --gameDir C:/synthetic/game', name: 'synthetic-java' }));
+  await live.track('synthetic', record);
+  assert.equal(live.readAll().synthetic.procStart, 1000);
+  assert.ok(live.readAll().synthetic.cmdHash);
 });

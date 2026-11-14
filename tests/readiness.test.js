@@ -195,24 +195,31 @@ test('обход идёт от недавно игравших сборок к �
 
 test('фон: первый обход через полминуты после старта, дальше по расписанию (спрашивает только тех, кому пора); остановка гасит таймеры', async (t) => {
   const w = world(t);
+  const realTimeout = setTimeout;
   t.mock.timers.enable({ apis: ['setTimeout', 'setInterval'] });
-  const settle = async () => {
-    for (let i = 0; i < 60; i++) await new Promise((r) => setImmediate(r));
+  const settle = async (ready) => {
+    const start = process.hrtime.bigint();
+    do {
+      await new Promise((r) => realTimeout(r, 10));
+      if (!ready || ready()) return;
+    } while (process.hrtime.bigint() - start < 5000000000n);
+    assert.fail('scheduled readiness work did not finish within the test budget');
   };
   const stop = w.readiness.start({ onChange: w.onChange });
   t.mock.timers.tick(29 * 1000);
   await settle();
   assert.equal(w.calls.length, 0, 'раньше полуминуты ничего не спрашиваем: запуск лаунчера важнее');
   t.mock.timers.tick(1500);
-  await settle();
+  await settle(() => w.modrinth().length === 2 && w.readiness.get(w.inst.id)?.ready === 3);
   assert.equal(w.modrinth().length, 2);
   assert.equal(w.readiness.get(w.inst.id).ready, 3);
   t.mock.timers.tick(3 * 3600 * 1000);
   await settle();
   assert.equal(w.modrinth().length, 2, 'через три часа итог ещё свежий: просыпаемся, но никого не спрашиваем');
   w.later(25);
+  const previous = w.readiness.get(w.inst.id).checkedAt;
   t.mock.timers.tick(3 * 3600 * 1000);
-  await settle();
+  await settle(() => w.modrinth().length === 4 && w.readiness.get(w.inst.id)?.checkedAt > previous);
   assert.equal(w.modrinth().length, 4, 'сутки прошли — проверили заново');
   stop();
   w.later(60);
