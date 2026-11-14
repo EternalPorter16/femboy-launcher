@@ -17,7 +17,15 @@ function profile() {
     dir,
     store,
     load: (m) => require(src(m)),
-    done: () => fs.rmSync(dir, { recursive: true, force: true }),
+    done: () => {
+      if (!fs.existsSync(dir)) return;
+      const tempRoot = fs.realpathSync(os.tmpdir());
+      if (path.dirname(dir) !== tempRoot || !path.basename(dir).startsWith('femboy-test-') || fs.realpathSync(dir) !== dir) throw new Error('Unsafe test-profile cleanup');
+      // Electron patches fs for ASAR paths. Cleanup uses native fs and bounded
+      // retries for Windows sharing/ENOTEMPTY races, while persistent errors fail.
+      const nativeFs = process.versions.electron ? require('original-fs') : fs;
+      nativeFs.rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
+    },
   };
 }
 
