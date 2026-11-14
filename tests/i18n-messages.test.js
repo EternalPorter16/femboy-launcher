@@ -204,10 +204,12 @@ test('значок «вышли обновления модов»: подпис�
   assert.equal(en.tr(title), 'Mod updates are out: Sodium, Iris and 3 more. Click to see what’s new and update');
   assert.equal(en.tr(template('renderer/app/home.js', 'Вышли обновления модов: ', { names: 'Sodium' })), 'Mod updates are out: Sodium. Click to see what’s new and update');
   assert.equal(en.tr('Что нового'), 'What’s new');
-  const hint = fs.readFileSync(src('renderer/index.html'), 'utf8').match(/<p class="hint">(Раз в сутки лаунчер в фоне спрашивает у Modrinth, вышли ли новые версии модов[^<]*)<\/p>/);
+  const hint = fs.readFileSync(src('renderer/index.html'), 'utf8').match(/id="modUpdatesCheck"[\s\S]*?<p class="hint">([^<]*)<\/p>/);
   assert.ok(hint, 'пояснение к выключателю не нашлось в index.html');
   assert.ok(!CYR.test(en.tr(hint[1])), en.tr(hint[1]));
-  assert.ok(!CYR.test(en.tr('Подсказывать, когда вышли обновления модов')));
+  assert.match(hint[1], /модпаков/);
+  assert.match(en.tr(hint[1]), /CurseForge/);
+  assert.ok(!CYR.test(en.tr('Подсказывать обновления модов и модпаков')));
 });
 
 test('«Одинаковые моды» в настройках: подсчёт, вопрос и итог (с пропущенными и без) переводятся целиком', () => {

@@ -914,6 +914,14 @@
       'Once a day the launcher asks Modrinth in the background whether new versions of the mods of each instance are out, and shows an “N mod updates” badge on the card: it opens the “Update mods” window with the changes described. It installs and downloads nothing by itself; the hashes of the mod files go to Modrinth, as with the manual check. Turn it off if you don’t need it.',
   });
 
+  Object.assign(D, {
+    "Проверяет обновления модов на Modrinth и готовых модпаков на Modrinth/CurseForge. Автоматическая установка не выполняется. Выключи, чтобы остановить фоновые проверки; ручная проверка остаётся доступной.": 'Checks mods on Modrinth and modpacks on Modrinth/CurseForge. Updates are not installed automatically. Turn this off to stop background checks; manual checks remain available.',
+    'Подсказывать обновления модов и модпаков': 'Suggest mod and modpack updates',
+    'Загрузить скин': 'Load skin', 'Загрузить плащи': 'Load capes',
+    'Плащей пока нет': 'No capes yet', 'Не удалось загрузить скин': 'Could not load skin',
+    'Скин и плащи загружаются по кнопке. До загрузки показан локальный скин или пример.': 'Load skins and capes using the buttons. Until then, a local skin or example is shown.',
+  });
+
   // «Итоги игры»: окно с картинкой (сама картинка и её подпись приходят из главного процесса уже на нужном языке)
   Object.assign(D, {
     '🖼️ Итоги недели и месяца': '🖼️ Weekly and monthly recap', 'Картинка с итогами за неделю или месяц: можно сохранить или скопировать': 'A picture with the weekly or monthly recap: save it or copy it',

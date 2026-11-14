@@ -60,7 +60,7 @@ Function FLPrivacyPage
     Pop $FLPrivacyUpdates
     ${NSD_CreateCheckbox} 0 81u 100% 12u "Показывать мою игру в Discord (включая адрес сервера)"
     Pop $FLPrivacyDiscord
-    ${NSD_CreateCheckbox} 0 95u 100% 12u "Проверять новые версии установленных модов (Modrinth)"
+    ${NSD_CreateCheckbox} 0 95u 100% 12u "Проверять обновления модов и модпаков"
     Pop $FLPrivacyMods
     ${NSD_CreateCheckbox} 0 109u 100% 12u "Проверять готовность модов к новой версии игры"
     Pop $FLPrivacyReadiness
@@ -71,7 +71,7 @@ Function FLPrivacyPage
     Pop $FLPrivacyUpdates
     ${NSD_CreateCheckbox} 0 81u 100% 12u "Show my game in Discord (including server address)"
     Pop $FLPrivacyDiscord
-    ${NSD_CreateCheckbox} 0 95u 100% 12u "Check installed mods for updates (Modrinth)"
+    ${NSD_CreateCheckbox} 0 95u 100% 12u "Check mods and modpacks for updates"
     Pop $FLPrivacyMods
     ${NSD_CreateCheckbox} 0 109u 100% 12u "Check mod readiness for a new game version"
     Pop $FLPrivacyReadiness

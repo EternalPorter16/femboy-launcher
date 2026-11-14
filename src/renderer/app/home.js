@@ -275,15 +275,22 @@ $('#instGroups').onclick = (e) => {
 // Обновления модпаков проверяем в фоне раз за запуск лаунчера (и после установки нового)
 const packUpdates = {};
 const packChecked = new Set();
+let packCheckRunning = false;
 async function checkPackUpdates() {
-  for (const i of state.instances.filter((x) => x.pack?.projectId && !packChecked.has(x.id))) {
-    packChecked.add(i.id);
-    try {
-      const r = await call('packs:check', i.id);
-      if (r) packUpdates[i.id] = r;
-    } catch {}
-  }
-  if (Object.values(packUpdates).some((u) => u.available)) renderInstances();
+  if (state.settings.modUpdatesCheck === false || packCheckRunning) return;
+  packCheckRunning = true;
+  try {
+    for (const i of state.instances.filter((x) => x.pack?.projectId && !packChecked.has(x.id))) {
+      if (state.settings.modUpdatesCheck === false) return;
+      packChecked.add(i.id);
+      try {
+        const r = await call('packs:check', i.id, { background: true });
+        if (state.settings.modUpdatesCheck === false) { packChecked.delete(i.id); return; }
+        if (r) packUpdates[i.id] = r;
+      } catch { packChecked.delete(i.id); }
+    }
+    if (Object.values(packUpdates).some((u) => u.available)) renderInstances();
+  } finally { packCheckRunning = false; }
 }
 $('#newInstBtn').onclick = () => openInstanceModal();
 $('#browsePacksBtn').onclick = () => openBrowser('modrinth', 'modpack');

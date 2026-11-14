@@ -4,7 +4,7 @@
 
 The project is preparing for code signing. SignPath Foundation acceptance, a configured signing integration and a signed release have not been confirmed. The current public release must not be described as signed by SignPath.
 
-The GPL-3.0-only LICENSE and manual Windows unsigned build workflow are committed locally. Publishing a reviewed source revision and completing a hosted build remain separate steps. The unsigned workflow does not submit a signing request or publish a release. Its provenance manifest identifies the source, run and file hashes; it is not a cryptographic signature or proof of SignPath origin verification.
+The GPL-3.0-only LICENSE and manual Windows unsigned build workflow are committed locally. A reviewed source revision and one successful hosted unsigned build are now available; the subsequent privacy-control changes still require their own reviewed build before distribution. The unsigned workflow does not submit a signing request or publish a release. Its provenance manifest identifies the source, run and file hashes; it is not a cryptographic signature or proof of SignPath origin verification.
 
 ## Prepared locally
 
@@ -19,8 +19,8 @@ The GPL-3.0-only LICENSE and manual Windows unsigned build workflow are committe
 ## Remaining gates
 
 1. Resolve the lazy-val copyright-notice review and final distribution obligations. Do not mark the notice inventory complete without evidence.
-2. Finish the privacy/provider review and publish the policy for the reviewed release. The four optional-feature choices are not a global offline mode; MCHeads display requests and requested catalogs/login/downloads are separate. Disclosure alone does not establish that SignPath's disable-option requirement is met.
-3. Publish a reviewed source revision, complete a hosted build, and retain its exact workflow/run/artifact identity. The current unsigned workflow is preparation, not a signing pipeline.
+2. Finish the privacy/provider review and publish the policy for the reviewed release. The four optional-feature choices are not a global offline mode. Automatic modpack checks now share the mod-update choice. Passive avatars/previews use local data, and Microsoft skin/cape loading requires explicit actions; requested catalogs/login/downloads remain separate. Disclosure alone does not establish that SignPath's disable-option requirement is met.
+3. Maintain a reviewed public source revision, repeat the hosted build after source changes, and retain its exact workflow/run/artifact identity. The current unsigned workflow is preparation, not a signing pipeline.
 4. Confirm SignPath MFA, actual maintainer/approver roles, account access and Foundation acceptance. The maintainer is a proposed approver; no service-side configuration is inferred.
 5. After acceptance, configure supported origin verification, product/version restrictions, upstream-binary exclusions, manual approval, timestamping and the application's nested signing sequence.
 6. Verify final signatures, compute hashes and update metadata from final signed bytes, and test both distribution formats and the installed updater transition before publishing.

@@ -138,8 +138,11 @@ wake();
 
 /* ---------- профиль в сайдбаре ---------- */
 function avatarHtml(acc, cls = '', dot = false) {
-  return `<div class="avatar ${cls}">${acc ? `<img src="${acc.head || headUrl(acc)}" alt="">` : '<div class="fallback">?</div>'}${dot && acc ? `<i class="dot ${acc.type}"></i>` : ''}</div>`;
+  const head = localSkinData(manualSkinPreviews.get(acc?.id)?.head) || localSkinData(acc?.head);
+  const picture = head ? `<img src="${esc(head)}" alt="">` : `<div class="fallback">${esc((acc?.name || '?').slice(0, 1).toUpperCase())}</div>`;
+  return `<div class="avatar ${cls}">${picture}${dot && acc ? `<i class="dot ${acc.type}"></i>` : ''}</div>`;
 }
+
 
 // Внизу боковой панели: аватарка, ник и точка — зелёная у Microsoft, жёлтая у оффлайн-аккаунта
 function renderMe() {

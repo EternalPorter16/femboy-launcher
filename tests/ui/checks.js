@@ -1650,6 +1650,27 @@ function extra(version) {
         return opened === 1 && document.querySelector('#updateRecovery').innerText.includes('FIXTURE');
       } finally { window.call = originalCall; document.querySelector('#modalBox').isDirty = null; closeModal(); }
     `],
+    ['приватность: скин и плащи только по кнопке', `
+      const originalCall = call, oldAccounts = state.accounts, oldActive = state.activeAccount;
+      let skinRequests = 0, capeRequests = 0;
+      const account = {id: 'privacy-synthetic-ms', type:'microsoft', name:'Synthetic', uuid:'synthetic-uuid'};
+      window.call = async (ch, ...args) => {
+        if (ch === 'skins:fromName') { skinRequests++; return {data:Skins.PRESETS[0].make('slim').toDataURL('image/png'), model:'slim'}; }
+        if (ch === 'skins:msProfile') { capeRequests++; return {capes:[]}; }
+        if (ch === 'state:get') return {...state, accounts:[account], activeAccount:account.id, running:[...state.running]};
+        return originalCall(ch, ...args);
+      };
+      try {
+        state.accounts=[account]; state.activeAccount=account.id; showPage('accounts'); renderAccounts(); renderAccounts(); await s(300);
+        if (skinRequests || capeRequests || document.querySelector('#accList img[src^=\"http\"]')) return false;
+        if (!skinViewer || !document.querySelector('[data-skin=\"msload\"]') || !document.querySelector('[data-skin=\"capes\"]')) return false;
+        document.querySelector('[data-skin=\"msload\"]').click(); await s(400);
+        if (skinRequests !== 1 || capeRequests !== 0 || !manualSkinPreviews.has(account.id)) return false;
+        renderAccounts(); await s(100); if (skinRequests !== 1 || capeRequests) return false;
+        document.querySelector('[data-skin=\"capes\"]').click(); await s(200);
+        return capeRequests === 1 && !document.querySelector('img[src*=\"mc-heads\"]');
+      } finally { window.call=originalCall; manualSkinPreviews.delete(account.id); state.accounts=oldAccounts; state.activeAccount=oldActive; renderAccounts(); showPage('instances'); }
+    `],
     ['приватность: фоновые обновления и локальный текст RU/EN', `
       const originalCall = window.call;
       let policyOpened = 0;

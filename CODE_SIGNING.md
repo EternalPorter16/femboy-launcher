@@ -6,7 +6,7 @@ Femboy Launcher is preparing to apply for free open-source code signing through 
 
 Only official Windows application binaries and installers built from this project's public source revision would be submitted for signing. Third-party components retain their licenses and signing identities. A signature must never be used to imply ownership of upstream software or of Minecraft.
 
-Maintainer and proposed signing approver: [EternalPorter16](https://github.com/EternalPorter16). The maintainer has confirmed GitHub multi-factor authentication. SignPath account security and signing roles must still be confirmed before enabling signing. Every production signing request must receive manual approval.
+Maintainer and proposed signing approver: [awesolune](https://github.com/awesolune). The maintainer has confirmed GitHub multi-factor authentication. SignPath account security and signing roles must still be confirmed before enabling signing. Every production signing request must receive manual approval.
 
 ## Release process to implement after acceptance
 
@@ -15,7 +15,7 @@ Maintainer and proposed signing approver: [EternalPorter16](https://github.com/E
 3. Verify signatures and timestamps, then calculate release sizes and hashes from the **final signed bytes**. Generate update metadata from those same files.
 4. Test updating an isolated installation and launching both distribution formats before publishing the identical signed artifacts to the existing distribution channels.
 
-A manual-only unsigned Windows build workflow is prepared locally in `.github/workflows/windows-unsigned.yml`, with exact source/run identifiers and hashes. It has not yet run on GitHub and does not submit files to SignPath. The current local release scripts do not yet implement the signing steps. GitHub Releases currently provides a reserve download channel; it is not itself a code-signing service.
+A manual-only unsigned Windows build workflow is prepared locally in `.github/workflows/windows-unsigned.yml`, with exact source/run identifiers and hashes. One hosted preparation build has succeeded; later source changes need a new matching build. The workflow does not submit files to SignPath. The current local release scripts do not yet implement the signing steps. GitHub Releases currently provides a reserve download channel; it is not itself a code-signing service.
 
 ## Prerequisites still under review
 

@@ -89,7 +89,9 @@ window.addEventListener('unhandledrejection', (e) => reportError(e.reason?.messa
 const activeAccount = () => state.accounts.find((a) => a.id === state.activeAccount);
 const selectedInstance = () => state.instances.find((i) => i.id === state.selected);
 const ACC_TYPES = { microsoft: 'Microsoft', elyby: 'Ely.by', offline: 'Оффлайн' };
-const headUrl = (acc) => `https://mc-heads.net/avatar/${acc.type === 'microsoft' ? acc.uuid : 'MHF_Steve'}/64`;
+// Passive rendering accepts local PNG data only. Explicit skin loads stay in memory for this session.
+const localSkinData = (value) => typeof value === 'string' && /^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(value) ? value : null;
+const manualSkinPreviews = new Map();
 const fmtRam = (mb) => (mb >= 1024 ? `${(mb / 1024).toFixed(mb % 1024 ? 2 : 0)} ГБ` : `${mb} МБ`);
 const fmtNum = (n) => (n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1e3 ? Math.round(n / 1e3) + 'K' : String(n));
 const fmtSize = (b) => (b >= 1073741824 ? (b / 1073741824).toFixed(1) + ' ГБ' : b >= 1048576 || !b ? (b / 1048576).toFixed(1) + ' МБ' : Math.max(1, Math.round(b / 1024)) + ' КБ');
@@ -121,12 +123,13 @@ async function refresh() {
   const s = await call('state:get');
   Object.assign(state, { ...s, running: new Set(s.running) });
   if (s.system.storeNote) announceStoreNote(s.system.storeNote);
+  for (const id of manualSkinPreviews.keys()) if (!state.accounts.some((a) => a.id === id)) manualSkinPreviews.delete(id);
   paintNet(s.system.net);
   state.power = await call('power:get').catch(() => state.power);
   // Аватарки оффлайн-аккаунтов рисуем из их собственного скина
   await Promise.all(
     state.accounts
-      .filter((a) => a.skin)
+      .filter((a) => localSkinData(a.skin?.data))
       .map(async (a) => {
         if (!headCache.has(a.skin.data)) headCache.set(a.skin.data, await Skins.headDataUrl(a.skin.data).catch(() => null));
         a.head = headCache.get(a.skin.data);

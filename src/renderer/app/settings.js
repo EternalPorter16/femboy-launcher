@@ -235,7 +235,11 @@ $('#clearWhitelist').onchange = (e) => saveSettings({ clearWhitelist: e.target.c
 $('#backupBeforeFriends').onchange = (e) => saveSettings({ backupBeforeFriends: e.target.checked });
 $('#gameProxy').onchange = (e) => saveSettings({ gameProxy: e.target.checked });
 $('#readinessCheck').onchange = (e) => saveSettings({ readinessCheck: e.target.checked });
-$('#modUpdatesCheck').onchange = (e) => saveSettings({ modUpdatesCheck: e.target.checked });
+$('#modUpdatesCheck').onchange = async (e) => {
+  const enabled = e.target.checked;
+  await saveSettings({ modUpdatesCheck: enabled });
+  if (enabled) checkPackUpdates();
+};
 $('#soundOn').onchange = (e) => saveSettings({ soundOn: e.target.checked });
 $('#soundVol').oninput = (e) => {
   $('#soundVolVal').textContent = e.target.value + '%';

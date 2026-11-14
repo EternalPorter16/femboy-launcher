@@ -24,6 +24,7 @@ function renderAccounts() {
 
 /* ---------- скин активного аккаунта ---------- */
 let skinViewer = null;
+let localDefaultPreview = null;
 // 3D-превью живёт своим циклом отрисовки: если оставить его включённым на других страницах, WebGL весь день рисует невидимого
 // человечка 60 раз в секунду. Поэтому создаём его, когда открыта страница аккаунтов, и ставим на паузу, когда уходим или лаунчер уснул
 const pauseSkin = () => skinViewer && (skinViewer.renderPaused = document.body.dataset.page !== 'accounts' || Calm.asleep);
@@ -36,32 +37,34 @@ function renderSkinCard() {
   pauseSkin();
   const offline = acc.type === 'offline';
   const ely = acc.type === 'elyby';
-  const src = acc.skin?.data || `https://mc-heads.net/skin/${offline || ely ? 'MHF_Steve' : acc.uuid}`;
-  Skins.showSkin(skinViewer, src, acc.skin?.model);
-  $('#skinModel').textContent = acc.skin ? (acc.skin.model === 'slim' ? 'Slim' : 'Classic') : offline || ely ? 'стандартный' : 'лицензия';
+  const preview = manualSkinPreviews.get(acc.id);
+  const src = localSkinData(preview?.data) || localSkinData(acc.skin?.data) || (localDefaultPreview ||= Skins.PRESETS[0].make(Skins.PRESETS[0].model).toDataURL('image/png'));
+  Skins.showSkin(skinViewer, src, preview?.model || acc.skin?.model);
+  $('#skinModel').textContent = preview || localSkinData(acc.skin?.data) ? ((preview?.model || acc.skin?.model) === 'slim' ? 'Slim' : 'Classic') : 'стандартный';
   $('#skinNote').textContent = ely
     ? 'Скин и плащ Ely.by меняются на сайте ely.by. В игре новый скин появится сам, а здесь его можно подтянуть кнопкой «Обновить скин».'
     : offline
       ? acc.skin
         ? 'Скин виден тебе в игре. На серверах его увидят только там, где стоит SkinsRestorer.'
         : 'Сейчас стандартный скин. Нарисуй свой, загрузи PNG или возьми скин по нику ♡'
-      : 'Скин и плащ лицензии меняются прямо здесь — их увидят все игроки.';
+      : 'Скин и плащи загружаются по кнопке. До загрузки показан локальный скин или пример.';
   $('#skinActions').innerHTML = ely
     ? `<a class="btn primary" href="https://ely.by/skins" target="_blank">Сменить на ely.by</a>
        <button class="btn soft" data-skin="elysync">Обновить скин</button>`
     : `<button class="btn primary" data-skin="edit">🎨 Редактор</button>
        <button class="btn soft" data-skin="upload">Загрузить PNG</button>
        ${offline && acc.skin ? '<button class="btn ghost danger" data-skin="reset">Сбросить</button>' : ''}
-       ${offline ? '' : '<div class="capes" id="capes"></div>'}`;
-  if (!offline && !ely) renderCapes(acc);
+       ${offline ? '' : '<button class="btn soft" data-skin="msload">Загрузить скин</button><button class="btn soft" data-skin="capes">Загрузить плащи</button><div class="capes" id="capes"></div>'}`;
 }
 
 // Плащи лицензионного аккаунта
 async function renderCapes(acc) {
   const host = $('#capes');
+  if (!host) return;
   try {
     const p = await call('skins:msProfile', acc.id);
-    if (!host.isConnected || !p.capes.length) return;
+    if (!host.isConnected || activeAccount()?.id !== acc.id) return;
+    if (!p.capes.length) { host.textContent = 'Плащей пока нет'; return; }
     host.innerHTML = `<select id="capeSel" class="mini-select"><option value="">Без плаща</option>${p.capes.map((c) => `<option value="${esc(c.id)}" ${c.active ? 'selected' : ''}>Плащ: ${esc(c.alias)}</option>`).join('')}</select>`;
     $('#capeSel').onchange = async (e) => {
       try {
@@ -71,7 +74,7 @@ async function renderCapes(acc) {
         toast(err.message, 'err');
       }
     };
-  } catch {}
+  } catch (err) { if (host.isConnected) toast(err.message, 'err'); }
 }
 
 async function openSkinEditor(src, model) {
@@ -107,7 +110,22 @@ $('#skinActions').addEventListener('click', async (e) => {
   const act = e.target.closest('[data-skin]')?.dataset.skin;
   const acc = activeAccount();
   if (!act || !acc) return;
-  if (act === 'edit') openSkinEditor(acc.skin?.data, acc.skin?.model);
+  if (act === 'edit') openSkinEditor(manualSkinPreviews.get(acc.id)?.data || localSkinData(acc.skin?.data), manualSkinPreviews.get(acc.id)?.model || acc.skin?.model);
+  if (act === 'capes' && acc.type === 'microsoft') await renderCapes(acc);
+  if (act === 'msload' && acc.type === 'microsoft') {
+    const button = e.target.closest('button');
+    if (button.disabled) return;
+    button.disabled = true;
+    try {
+      const r = await call('skins:fromName', acc.name);
+      const data = localSkinData(r?.data);
+      if (!data) throw new Error('Не удалось загрузить скин');
+      const head = await Skins.headDataUrl(data).catch(() => null);
+      manualSkinPreviews.set(acc.id, { data, model: r.model, head });
+      await refresh();
+    } catch (err) { toast(err.message, 'err'); }
+    finally { if (button.isConnected) button.disabled = false; }
+  }
   if (act === 'upload') $('#skinFile').click();
   if (act === 'elysync') {
     try {

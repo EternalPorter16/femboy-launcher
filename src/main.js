@@ -988,7 +988,8 @@ handle('packs:recoveryFolder', (id) => {
   if (!fs.lstatSync(dir).isDirectory()) throw new Error('Папка восстановления не найдена');
   return shell.openPath(dir);
 });
-handle('packs:check', (id) => {
+handle('packs:check', (id, options) => {
+  if (options?.background === true && store.get().settings.modUpdatesCheck === false) return null;
   const pack = instances.get(id).pack;
   if (!pack?.projectId) return null;
   return source(pack.source).checkModpackUpdate(id);

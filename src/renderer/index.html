@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta http-equiv="Content-Security-Policy"
-    content="default-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'none'; img-src 'self' https://mc-heads.net https://cdn.modrinth.com https://media.forgecdn.net https://textures.minecraft.net data: blob: file:; style-src 'self' 'unsafe-inline'; font-src 'self'; script-src 'self'">
+    content="default-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'none'; img-src 'self' https://cdn.modrinth.com https://media.forgecdn.net https://textures.minecraft.net data: blob: file:; style-src 'self' 'unsafe-inline'; font-src 'self'; script-src 'self'">
   <title>Femboy Launcher</title>
   <link rel="stylesheet" href="fonts/fonts.css">
   <link rel="stylesheet" href="style.css">
@@ -389,8 +389,8 @@
                   <p class="hint">Java сама системный прокси не видит. Если интернет есть только через прокси или VPN, лаунчер передаёт его игре, чтобы моды вроде e4mc могли выйти в сеть. Выключи, если из-за этого что-то в игре не работает: тогда игра пойдёт в сеть напрямую.</p>
                   <label class="toggle"><input type="checkbox" id="readinessCheck"><span class="knob"></span>Подсказывать, когда моды готовы к новой версии Minecraft</label>
                   <p class="hint">Раз в сутки лаунчер в фоне спрашивает у Modrinth, сколько модов каждой сборки уже вышло под самую свежую версию игры, и показывает значок «🚀 версия: готовы N из M модов» (по нему открывается перенос). На Modrinth уходят хэши файлов модов, как и при проверке обновлений; ничего не скачивается и не меняется. Выключи, если не нужно.</p>
-                  <label class="toggle"><input type="checkbox" id="modUpdatesCheck"><span class="knob"></span>Подсказывать, когда вышли обновления модов</label>
-                  <p class="hint">Раз в сутки лаунчер в фоне спрашивает у Modrinth, вышли ли новые версии модов каждой сборки, и показывает на карточке значок «N обновлений модов»: по нему открывается окно «Обновить моды» с описанием изменений. Сам ничего не ставит и не скачивает; на Modrinth уходят хэши файлов модов, как и при ручной проверке. Выключи, если не нужно.</p>
+                  <label class="toggle"><input type="checkbox" id="modUpdatesCheck"><span class="knob"></span>Подсказывать обновления модов и модпаков</label>
+                  <p class="hint">Проверяет обновления модов на Modrinth и готовых модпаков на Modrinth/CurseForge. Автоматическая установка не выполняется. Выключи, чтобы остановить фоновые проверки; ручная проверка остаётся доступной.</p>
                   <div class="row bg-row"><button class="btn soft" id="netCheck">Проверить связь</button></div>
                 </div>
                 <div class="card">
