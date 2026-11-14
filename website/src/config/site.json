@@ -4,9 +4,10 @@
   "description": "Бесплатный лаунчер Minecraft Java Edition для Windows 10 и 11: сборки Modrinth, Fabric, Forge и NeoForge. Установщик и Portable, перенос сборок и помощь при вылетах.",
   "url": "https://femboylauncher.ru",
   "contacts": {
-    "telegram": "bart_awesome",
-    "discord": "bart_awesome",
-    "website": "https://bart-awesome.ru/",
+    "telegram": "FemboyLauncherSupportBot",
     "github": "https://github.com/EternalPorter16/femboy-launcher"
+  },
+  "support": {
+    "url": "https://yoomoney.ru/fundraise/1LHQKLI0RTF.261114"
   }
 }

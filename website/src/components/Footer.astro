@@ -48,17 +48,10 @@ telegramShare.searchParams.set('text', english ? 'Femboy Launcher — Minecraft 
       <li><a href="https://modrinth.com" target="_blank" rel="noopener">Modrinth</a></li>
     </ul>
     <div class="foot-contacts" aria-labelledby="contacts-title">
-      <h2 id="contacts-title">Связаться с разработчиком</h2>
-      <p class="contact-intro">Другие проекты и немного обо мне — на личном сайте. С вопросами о лаунчере и отзывами пиши в Telegram или Discord.</p>
+      <h2 id="contacts-title">Поддержка лаунчера</h2>
+      <p class="contact-intro">Вопросы, ошибки и предложения — через Telegram-бота поддержки.</p>
       <ul>
-        <li><a class="contact-identity author-site" href={site.contacts.website} target="_blank" rel="noopener"><span class="contact-icon"><Icon name="worlds" /></span><span>Сайт автора — Bart Awesome</span></a></li>
-        <li><a class="contact-identity" href={`https://t.me/${site.contacts.telegram}`} target="_blank" rel="noopener"><span class="contact-icon"><Icon name="telegram" /></span><span>Telegram: @{site.contacts.telegram}</span></a></li>
-        <li>
-          <span class="contact-identity"><span class="contact-icon"><Icon name="discord" /></span><span>Discord: <code id="discord-contact" translate="no">{site.contacts.discord}</code></span></span>
-          <button class="btn btn-soft" type="button" data-copy="discord-contact" aria-label="Скопировать имя в Discord">
-            <Icon name="copy" /><span aria-live="polite">Скопировать</span>
-          </button>
-        </li>
+        <li><a class="contact-identity" href={`https://t.me/${site.contacts.telegram}`} target="_blank" rel="noopener"><span class="contact-icon"><Icon name="telegram" /></span><span>Поддержка в Telegram</span></a></li>
       </ul>
       <div class="feedback-invite" id="feedback" aria-labelledby="feedback-title">
         <div>
@@ -81,6 +74,16 @@ telegramShare.searchParams.set('text', english ? 'Femboy Launcher — Minecraft 
         </div>
       </div>
     )}
+    <section class="foot-support" id="support" aria-labelledby="support-title">
+      <div>
+        <h2 id="support-title">Поддержать проект</h2>
+        <p>Лаунчер остаётся бесплатным. Добровольная поддержка помогает оплачивать хостинг и развивать проект. Перевод не даёт платных преимуществ.</p>
+      </div>
+      <div class="support-action">
+        <a class="btn btn-soft" href={site.support.url} target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer">Поддержать через ЮMoney</a>
+        <p>Откроется страница сбора ЮMoney. Сумму выбираешь ты.</p>
+      </div>
+    </section>
     <p class="foot-small">
       {year && <>Femboy Launcher, {year}. </>}Шрифты Comfortaa, Nunito и Fredoka — по <a href={`${base}fonts/LICENSE-fonts.txt`}>лицензии SIL Open Font License 1.1</a>.
     </p>

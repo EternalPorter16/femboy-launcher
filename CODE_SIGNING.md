@@ -6,7 +6,7 @@ Femboy Launcher is preparing to apply for free open-source code signing through 
 
 Only official Windows application binaries and installers built from this project's public source revision would be submitted for signing. Third-party components retain their licenses and signing identities. A signature must never be used to imply ownership of upstream software or of Minecraft.
 
-Maintainer and proposed signing approver: [EternalPorter16](https://github.com/EternalPorter16). Account security and signing roles must be confirmed before enabling signing. Every production signing request must receive manual approval.
+Maintainer and proposed signing approver: [EternalPorter16](https://github.com/EternalPorter16). The maintainer has confirmed GitHub multi-factor authentication. SignPath account security and signing roles must still be confirmed before enabling signing. Every production signing request must receive manual approval.
 
 ## Release process to implement after acceptance
 
@@ -37,11 +37,11 @@ A later release can use another trusted provider. Before changing publisher iden
 
 ## Preparation records
 
-See [current gates](docs/SIGNING-PREPARATION.md), [asset provenance](docs/ASSET-PROVENANCE.md), and the [unpublished privacy draft](docs/PRIVACY-DRAFT.md). These documents do not claim acceptance, a signed release, a completed licensing review, or completed installation/privacy controls.
+See [current gates](docs/SIGNING-PREPARATION.md), [asset provenance](docs/ASSET-PROVENANCE.md), and the [unpublished privacy draft](docs/PRIVACY-DRAFT.md). These documents do not claim acceptance, a signed release or a completed licensing/provider review.
 
-Distribution license texts are now collected and checked by the Windows packaging hooks. A local unsigned unpacked build preserved the project/font/Electron notices and covered88packaged npm packages. Three legacy packages remain explicitly flagged for notice review. This does not mean that the final legal review or a signing integration is complete.
+Distribution license texts are now collected and checked by the Windows packaging hooks. A local unsigned unpacked build preserved the project/font/Electron notices and covered88packaged npm packages. Only lazy-val 1.0.5 remains explicitly flagged for notice review. This does not mean that the final legal review or a signing integration is complete.
 
-A local RU/EN installer privacy page and runtime background-update switch are now implemented and tested in isolation. Optional installer choices start unchecked, apply before background services, and are not rewritten by silent updates. Local privacy texts are included and checked in packaging. The draft is not yet public policy, and Portable first-run parity, provider references and licensing review remain incomplete. No claim of SignPath acceptance or signing is made.
+A local RU/EN installer privacy page and runtime background-update switch are now implemented and tested in isolation. Optional installer choices start unchecked, apply before background services, and are not rewritten by silent updates. Local privacy texts are included and checked in packaging. The draft is not yet public policy; provider references and licensing review remain incomplete. The separate first-run choice for fresh Portable profiles is described below. No claim of SignPath acceptance or signing is made.
 
 Fresh Portable and clean installed profiles without a recorded installer choice now show a separate local RU/EN choice before normal UI/background services. Existing valid profiles keep their settings on normal launch and silent updates (an explicit interactive installer choice replaces the four matching settings); cancellation exits without accepting. Actual unsigned Portable and isolated installed-payload tests cover save/cancel, legacy/corrupt profiles and save retry. This closes the previously missing first-run path locally, not the remaining licensing/installation/provider/hosted-CI/approval/signing work.
 
